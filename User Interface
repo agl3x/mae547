@@ -1,0 +1,336 @@
+classdef MAE547_Final_Project_App < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                      matlab.ui.Figure
+        GridLayout                    matlab.ui.container.GridLayout
+        LeftPanel                     matlab.ui.container.Panel
+        MAE547Team1FinalProjectLabel  matlab.ui.control.Label
+        ButtonGroup                   matlab.ui.container.ButtonGroup
+        IFCIButton                    matlab.ui.control.ToggleButton
+        IFCCButton                    matlab.ui.control.ToggleButton
+        DynamicsButton                matlab.ui.control.ToggleButton
+        rpValue                       matlab.ui.control.DropDown
+        Label_2                       matlab.ui.control.Label
+        dLabel                        matlab.ui.control.Label
+        Label                         matlab.ui.control.Label
+        aLabel                        matlab.ui.control.Label
+        thetaValue                    matlab.ui.control.NumericEditField
+        dValue                        matlab.ui.control.NumericEditField
+        alphaValue                    matlab.ui.control.NumericEditField
+        aValue                        matlab.ui.control.NumericEditField
+        ofJointsSpinner               matlab.ui.control.Spinner
+        ofJointsSpinnerLabel          matlab.ui.control.Label
+        RightPanel                    matlab.ui.container.Panel
+    end
+
+    % Properties that correspond to apps with auto-reflow
+    properties (Access = private)
+        onePanelWidth = 576;
+    end
+
+    
+    properties (Access = public)
+        jointCount = 1;
+        jointCountPrevious = 1;
+        aValues = [];
+        alphaValues = [];
+        dValues = [];
+        thetaValues = [];
+        rpValues = cell(1);
+    end
+
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Value changed function: ofJointsSpinner
+        function ofJointsSpinnerValueChanged(app, event)
+            app.jointCount = app.ofJointsSpinner.Value;
+            
+            if app.jointCount < 1
+                app.ofJointsSpinner.Value = 1;
+                app.jointCount = app.ofJointsSpinner.Value;
+            end
+
+            if app.jointCount > 10
+                app.ofJointsSpinner.Value = 10;
+                app.jointCount = app.ofJointsSpinner.Value;
+            end
+
+            a = [app.jointCount; app.jointCountPrevious];
+
+            for i = (min(a)+1):max(a)
+                %fprintf('Joint Count = %d\n',app.jointCount);
+                %fprintf('Previous Joint Count = %d\n',app.jointCountPrevious);
+                if app.jointCountPrevious > app.jointCount
+                    delete(app.aValue(i))
+                    delete(app.alphaValue(i))
+                    delete(app.dValue(i))
+                    delete(app.thetaValue(i))
+                    delete(app.rpValue(i))
+                else
+                    app.aValue(i) = uieditfield(app.UIFigure, 'numeric');
+                    app.alphaValue(i) = uieditfield(app.UIFigure, 'numeric');
+                    app.dValue(i) = uieditfield(app.UIFigure, 'numeric');
+                    app.thetaValue(i) = uieditfield(app.UIFigure, 'numeric');
+                    app.rpValue(i) = uidropdown(app.UIFigure, 'Items', {'Revolut', 'Prismatic'}, 'Value', 'Revolut');
+
+                    app.aValue(i).ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
+                    app.alphaValue(i).ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
+                    app.dValue(i).ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
+                    app.thetaValue(i).ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
+                    app.rpValue(i).ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
+
+                    app.aValue(i).Position = [((app.aValue(1).Position(1)) + 1), ((app.aValue(1).Position(2)) + 1) - 20*(i-1), app.aValue(1).Position(3), app.aValue(1).Position(4)];
+                    app.alphaValue(i).Position = [((app.alphaValue(1).Position(1)) + 1), ((app.alphaValue(1).Position(2)) + 1) - 20*(i-1), app.alphaValue(1).Position(3), app.alphaValue(1).Position(4)];
+                    app.dValue(i).Position = [((app.dValue(1).Position(1)) + 1), ((app.dValue(1).Position(2)) + 1) - 20*(i-1), app.dValue(1).Position(3), app.dValue(1).Position(4)];
+                    app.thetaValue(i).Position = [((app.thetaValue(1).Position(1)) + 1), ((app.thetaValue(1).Position(2)) + 1) - 20*(i-1), app.thetaValue(1).Position(3), app.thetaValue(1).Position(4)]; 
+                    app.rpValue(i).Position = [((app.rpValue(1).Position(1)) + 1), ((app.rpValue(1).Position(2)) + 1) - 20*(i-1), app.rpValue(1).Position(3), app.rpValue(1).Position(4)];
+                    
+                    if i <= length(app.aValues)
+                        app.aValue(i).Value = app.aValues(i);
+                    else
+                        app.aValue(i).Value = 0;
+                    end
+                    if i <= length(app.alphaValues)
+                        app.alphaValue(i).Value = app.alphaValues(i);
+                    else
+                        app.alphaValue(i).Value = 0;
+                    end
+                    if i <= length(app.dValues)
+                        app.dValue(i).Value = app.dValues(i);
+                    else
+                        app.dValue(i).Value = 0;
+                    end
+                    if i <= length(app.thetaValues)
+                        app.thetaValue(i).Value = app.thetaValues(i);
+                    else
+                        app.thetaValue(i).Value = 0;
+                    end
+                    if i <= length(app.rpValues) && ~isempty(app.rpValues{i})
+                        fprintf('rpValues{%d} = "%s"\n', i, app.rpValues{i});
+                        app.rpValue(i).Value = app.rpValues{i};
+                    else
+                        app.rpValue(i).Value = 'Revolut';
+                    end
+                end
+            end
+            app.jointCountPrevious = app.jointCount;
+        end
+
+        % Value changed function: aValue
+        function aValueValueChanged(app, event)
+            aValueTemp = event.Value;
+            changedBox = event.Source;
+            index = find(app.aValue == changedBox);
+            app.aValues(index) = aValueTemp;
+            fprintf('Box number %d was changed to %f\n', index, aValueTemp);
+        end
+
+        % Value changed function: alphaValue
+        function alphaValueValueChanged(app, event)
+            alphaValueTemp = event.Value;
+            changedBox = event.Source;
+            index = find(app.alphaValue == changedBox);
+            app.alphaValues(index) = alphaValueTemp;
+            fprintf('Box number %d was changed to %f\n', index, alphaValueTemp);
+            
+        end
+
+        % Value changed function: dValue
+        function dValueValueChanged(app, event)
+            dValueTemp = event.Value;
+            changedBox = event.Source;
+            index = find(app.dValue == changedBox);
+            app.dValues(index) = dValueTemp;
+            fprintf('Box number %d was changed to %f\n', index, dValueTemp);
+            
+        end
+
+        % Value changed function: thetaValue
+        function thetaValueValueChanged(app, event)
+            thetaValueTemp = event.Value;
+            changedBox = event.Source;
+            index = find(app.thetaValue == changedBox);
+            app.thetaValues(index) = thetaValueTemp;
+            fprintf('Box number %d was changed to %f\n', index, thetaValueTemp);
+            
+        end
+
+        % Value changed function: rpValue
+        function rpValueValueChanged(app, event)
+            rpValueTemp = event.Value;
+            changedBox = event.Source;
+            index = find(app.rpValue == changedBox);
+            app.rpValues{index} = rpValueTemp;
+            fprintf('Box number %d was changed to %s\n', index, rpValueTemp);
+            
+        end
+
+        % Changes arrangement of the app based on UIFigure width
+        function updateAppLayout(app, event)
+            currentFigureWidth = app.UIFigure.Position(3);
+            if(currentFigureWidth <= app.onePanelWidth)
+                % Change to a 2x1 grid
+                app.GridLayout.RowHeight = {752, 752};
+                app.GridLayout.ColumnWidth = {'1x'};
+                app.RightPanel.Layout.Row = 2;
+                app.RightPanel.Layout.Column = 1;
+            else
+                % Change to a 1x2 grid
+                app.GridLayout.RowHeight = {'1x'};
+                app.GridLayout.ColumnWidth = {253, '1x'};
+                app.RightPanel.Layout.Row = 1;
+                app.RightPanel.Layout.Column = 2;
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.AutoResizeChildren = 'off';
+            app.UIFigure.Position = [100 100 804 752];
+            app.UIFigure.Name = 'MATLAB App';
+            app.UIFigure.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
+
+            % Create GridLayout
+            app.GridLayout = uigridlayout(app.UIFigure);
+            app.GridLayout.ColumnWidth = {253, '1x'};
+            app.GridLayout.RowHeight = {'1x'};
+            app.GridLayout.ColumnSpacing = 0;
+            app.GridLayout.RowSpacing = 0;
+            app.GridLayout.Padding = [0 0 0 0];
+            app.GridLayout.Scrollable = 'on';
+
+            % Create LeftPanel
+            app.LeftPanel = uipanel(app.GridLayout);
+            app.LeftPanel.Layout.Row = 1;
+            app.LeftPanel.Layout.Column = 1;
+
+            % Create ofJointsSpinnerLabel
+            app.ofJointsSpinnerLabel = uilabel(app.LeftPanel);
+            app.ofJointsSpinnerLabel.HorizontalAlignment = 'right';
+            app.ofJointsSpinnerLabel.Position = [19 698 60 22];
+            app.ofJointsSpinnerLabel.Text = '# of Joints';
+
+            % Create ofJointsSpinner
+            app.ofJointsSpinner = uispinner(app.LeftPanel);
+            app.ofJointsSpinner.ValueChangedFcn = createCallbackFcn(app, @ofJointsSpinnerValueChanged, true);
+            app.ofJointsSpinner.Position = [95 698 66 22];
+            app.ofJointsSpinner.Value = 1;
+
+            % Create aValue
+            app.aValue = uieditfield(app.LeftPanel, 'numeric');
+            app.aValue.ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
+            app.aValue.Position = [19 654 20 20];
+
+            % Create alphaValue
+            app.alphaValue = uieditfield(app.LeftPanel, 'numeric');
+            app.alphaValue.ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
+            app.alphaValue.Position = [39 654 20 20];
+
+            % Create dValue
+            app.dValue = uieditfield(app.LeftPanel, 'numeric');
+            app.dValue.ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
+            app.dValue.Position = [59 654 20 20];
+
+            % Create thetaValue
+            app.thetaValue = uieditfield(app.LeftPanel, 'numeric');
+            app.thetaValue.ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
+            app.thetaValue.Position = [79 654 20 20];
+
+            % Create aLabel
+            app.aLabel = uilabel(app.LeftPanel);
+            app.aLabel.Position = [27 673 11 22];
+            app.aLabel.Text = 'a';
+
+            % Create Label
+            app.Label = uilabel(app.LeftPanel);
+            app.Label.Position = [47 673 11 22];
+            app.Label.Text = 'α';
+
+            % Create dLabel
+            app.dLabel = uilabel(app.LeftPanel);
+            app.dLabel.Position = [67 673 10 22];
+            app.dLabel.Text = 'd';
+
+            % Create Label_2
+            app.Label_2 = uilabel(app.LeftPanel);
+            app.Label_2.Position = [87 673 10 22];
+            app.Label_2.Text = 'θ';
+
+            % Create rpValue
+            app.rpValue = uidropdown(app.LeftPanel);
+            app.rpValue.Items = {'Revolut', 'Prismatic'};
+            app.rpValue.ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
+            app.rpValue.Position = [119 654 42 20];
+            app.rpValue.Value = 'Revolut';
+
+            % Create ButtonGroup
+            app.ButtonGroup = uibuttongroup(app.LeftPanel);
+            app.ButtonGroup.Title = 'Button Group';
+            app.ButtonGroup.Position = [39 297 208 59];
+
+            % Create DynamicsButton
+            app.DynamicsButton = uitogglebutton(app.ButtonGroup);
+            app.DynamicsButton.Text = 'Dynamics';
+            app.DynamicsButton.Position = [8 5 68 23];
+            app.DynamicsButton.Value = true;
+
+            % Create IFCCButton
+            app.IFCCButton = uitogglebutton(app.ButtonGroup);
+            app.IFCCButton.Text = 'IFC C';
+            app.IFCCButton.Position = [76 5 60 23];
+
+            % Create IFCIButton
+            app.IFCIButton = uitogglebutton(app.ButtonGroup);
+            app.IFCIButton.Text = 'IFC I';
+            app.IFCIButton.Position = [136 5 61 23];
+
+            % Create MAE547Team1FinalProjectLabel
+            app.MAE547Team1FinalProjectLabel = uilabel(app.LeftPanel);
+            app.MAE547Team1FinalProjectLabel.Position = [6 724 167 22];
+            app.MAE547Team1FinalProjectLabel.Text = 'MAE547 Team 1 Final Project ';
+
+            % Create RightPanel
+            app.RightPanel = uipanel(app.GridLayout);
+            app.RightPanel.Layout.Row = 1;
+            app.RightPanel.Layout.Column = 2;
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = MAE547_Final_Project_App
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
