@@ -4,14 +4,14 @@ n = numel(homeConfiguration(robot));
 mode = 'impedance'; %switch for compliance 
 
 % Impedance parameters
-Md = diag([2, 2, 2, 0.5, 0.5, 0.5]);  % accel error (mass/inertial)
-Kd = diag([40, 40, 40, 10, 10, 10]);  % vel error (damping)
-Kp = diag([400, 400, 400, 100, 100, 100]);  % position error (stiffness)
+Md = diag([2, 2, 2, 0.5, 0.5, 0.5]);  % accel error (mass/inertial) arbitrary
+Kd = diag([40, 40, 40, 10, 10, 10]);  % vel error (damping) arbitrary 
+Kp = diag([400, 400, 400, 100, 100, 100]);  % position error (stiffness) arbitrary
 
 % Compliance parameters
-Kp_c = diag([300, 300, 300, 80, 80, 80]);  % position
-Kv = diag([30, 30, 30, 8, 8, 8]);  % velocity
-Kc = diag([500, 500, 500, 150, 150, 150]);  % force to position
+Kp_c = diag([300, 300, 300, 80, 80, 80]);  % position arbitrary
+Kv = diag([30, 30, 30, 8, 8, 8]);  % velocity arbitrary
+Kc = diag([500, 500, 500, 150, 150, 150]);  % force to position arbitrary
 
 % time configurations
 dt = 0.001;
@@ -34,7 +34,7 @@ log_e = zeros(6, length(time));
 for i = 1:length(time)
     t = time(i);
 
-    % external force (contact at t=2s)
+    % external force (contact at t=2s) arbitrary
     F_ext = zeros(6, 1);
     if t > 2.0
         F_ext(3) = -5.0;
