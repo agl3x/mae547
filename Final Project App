@@ -5,6 +5,28 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         UIFigure                      matlab.ui.Figure
         GridLayout                    matlab.ui.container.GridLayout
         LeftPanel                     matlab.ui.container.Panel
+        ILinkValue_20                 matlab.ui.control.NumericEditField
+        ILinkValue_19                 matlab.ui.control.NumericEditField
+        ifcEquationLabel              matlab.ui.control.Label
+        ifcEquation                   matlab.ui.control.EditField
+        mdLabel                       matlab.ui.control.Label
+        kLabel                        matlab.ui.control.Label
+        kpLabel                       matlab.ui.control.Label
+        mdValue                       matlab.ui.control.NumericEditField
+        kValue                        matlab.ui.control.NumericEditField
+        kpValue                       matlab.ui.control.NumericEditField
+        hemzValue                     matlab.ui.control.NumericEditField
+        hemxValue                     matlab.ui.control.NumericEditField
+        hemyValue                     matlab.ui.control.NumericEditField
+        hefzValue                     matlab.ui.control.NumericEditField
+        hefxValue                     matlab.ui.control.NumericEditField
+        hefyValue                     matlab.ui.control.NumericEditField
+        heLabel                       matlab.ui.control.Label
+        SolveButton                   matlab.ui.control.Button
+        gzValue                       matlab.ui.control.NumericEditField
+        gxValue                       matlab.ui.control.NumericEditField
+        gyValue                       matlab.ui.control.NumericEditField
+        gLabel                        matlab.ui.control.Label
         linkNumber                    matlab.ui.control.Label
         LinksTableLabel               matlab.ui.control.Label
         ILinkLabel                    matlab.ui.control.Label
@@ -36,7 +58,6 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         icDoubleDotValue              matlab.ui.control.NumericEditField
         icDotLabel                    matlab.ui.control.Label
         icDotValue                    matlab.ui.control.NumericEditField
-        thetaVarValue                 matlab.ui.control.EditField
         jointNumber                   matlab.ui.control.Label
         vfLabel                       matlab.ui.control.Label
         sfLabel                       matlab.ui.control.Label
@@ -60,6 +81,19 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         vfMenu                        matlab.ui.container.Menu
         icDotMenu                     matlab.ui.container.Menu
         mLinkMenu                     matlab.ui.container.Menu
+        gxMenu                        matlab.ui.container.Menu
+        gyMenu                        matlab.ui.container.Menu
+        gzMenu                        matlab.ui.container.Menu
+        hefxMenu                      matlab.ui.container.Menu
+        hefyMenu                      matlab.ui.container.Menu
+        hefzMenu                      matlab.ui.container.Menu
+        hemxMenu                      matlab.ui.container.Menu
+        hemyMenu                      matlab.ui.container.Menu
+        hemzMenu                      matlab.ui.container.Menu
+        kpMenu                        matlab.ui.container.Menu
+        kMenu                         matlab.ui.container.Menu
+        mdMenu                        matlab.ui.container.Menu
+        ifcEquationMenu               matlab.ui.container.Menu
         ILinkMenu                     matlab.ui.container.Menu
         icDoubleDotMenu               matlab.ui.container.Menu
         dEquationMenu                 matlab.ui.container.Menu
@@ -76,6 +110,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         jointCountPrevious = 1;
         menuPrevious = 1;
         menuCurrent = 1;
+        solving = 0;
 
         aValues = [];
         alphaValues = [];
@@ -94,6 +129,9 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         vfValues = [];
         mLinkValues = [];
         ILinkValues = [];
+        gValues = [];
+        heValues = [];
+        kpkmdValues = [];
 
         cms_a = {};
         cms_alpha = {};
@@ -110,6 +148,10 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         cms_vf = {};
         cms_mLink = {};
         cms_ILink = {};
+        cms_g = {};
+        cms_he = {};
+        cms_kpkmd = {};
+        cms_ifcEquation = {};
 
     end
 
@@ -151,7 +193,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                         app.icDoubleDotMenu(i).Text = sprintf('Joint %d Initial Acceleration: %s m/s²', i, num2str(app.icDoubleDotValue(i).Value));
                     end
                 case 'dEquation'
-                    app.dEquationMenu(i).Text = sprintf('Joint %d τ: %s', i, num2str(app.dEquation(i).Value));
+                    app.dEquationMenu(i).Text = sprintf('Joint %d τ = %s', i, num2str(app.dEquation(i).Value));
                 case 'mJoint'
                     app.mJointMenu(i).Text = sprintf('Joint %d Mass: %s kg', i, num2str(app.mJointValue(i).Value));
                 case 'IJoint'
@@ -166,6 +208,36 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.mLinkMenu(i).Text = sprintf('Link %d Mass: %s kg', i, num2str(app.mLinkValue(i).Value));
                 case 'ILink'
                     app.ILinkMenu(i).Text = sprintf('Link %d Moment of Inertia: %s kg·m²', i, num2str(app.ILinkValue(i).Value));
+                case 'gx'
+                    app.gxMenu(i).Text = sprintf('Gravity in the x: %s m/s²', num2str(app.gxValue(i).Value));
+                case 'gy'
+                    app.gyMenu(i).Text = sprintf('Gravity in the y: %s m/s²', num2str(app.gyValue(i).Value));
+                case 'gz'
+                    app.gzMenu(i).Text = sprintf('Gravity in the z: %s m/s²', num2str(app.gzValue(i).Value));
+                case 'hefx'
+                    app.hefxMenu(i).Text = sprintf('Force in the x: %s N', num2str(app.hefxValue(i).Value));
+                case 'hefy'
+                    app.hefyMenu(i).Text = sprintf('Force in the y: %s N', num2str(app.hefyValue(i).Value));
+                case 'hefz'
+                    app.hefzMenu(i).Text = sprintf('Force in the z: %s N', num2str(app.hefzValue(i).Value));
+                case 'hemx'
+                    app.hemxMenu(i).Text = sprintf('Moment about x: %s N·m', num2str(app.hemxValue(i).Value));
+                case 'hemy'
+                    app.hemyMenu(i).Text = sprintf('Moment about y: %s N·m', num2str(app.hemyValue(i).Value));
+                case 'hemz'
+                    app.hemzMenu(i).Text = sprintf('Moment about z: %s N·m', num2str(app.hemzValue(i).Value));
+                case 'kp'
+                    app.kpMenu(i).Text = sprintf('kp-Value: %s', num2str(app.kpValue(i).Value));
+                case 'k'
+                    if app.MainMenus.SelectedObject == app.IFCCButton
+                        app.kMenu(i).Text = sprintf('k-Value: %s', num2str(app.kValue(i).Value));
+                    else
+                        app.kMenu(i).Text = sprintf('kd-Value: %s', num2str(app.kValue(i).Value));
+                    end
+                case 'md'
+                    app.mdMenu(i).Text = sprintf('md-Value: %s', num2str(app.mdValue(i).Value));
+                case 'ifcEquation'
+                    app.ifcEquationMenu(i).Text = sprintf('x_d = %s', num2str(app.ifcEquation(i).Value));
             end
         end
 
@@ -880,16 +952,95 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 app.ILinkMenu(1) = uimenu(cm_ILink, 'Text', '');
                 app.ILinkValue(1).ContextMenu = cm_ILink;
                 app.cms_ILink{1} = cm_ILink;
+
+                cm_gx = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'gx'));
+                app.gxMenu(1) = uimenu(cm_gx, 'Text', '');
+                app.gxValue(1).ContextMenu = cm_gx;
+                app.cms_g{1} = cm_gx;
+
+                cm_gy = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'gy'));
+                app.gyMenu(1) = uimenu(cm_gy, 'Text', '');
+                app.gyValue(1).ContextMenu = cm_gy;
+                app.cms_g{2} = cm_gy;
+
+                cm_gz = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'gz'));
+                app.gzMenu(1) = uimenu(cm_gz, 'Text', '');
+                app.gzValue(1).ContextMenu = cm_gz;
+                app.cms_g{3} = cm_gz;
+
+                cm_hefx = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hefx'));
+                app.hefxMenu(1) = uimenu(cm_hefx, 'Text', '');
+                app.hefxValue(1).ContextMenu = cm_hefx;
+                app.cms_he{1} = cm_hefx;
+
+                cm_hefy = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hefy'));
+                app.hefyMenu(1) = uimenu(cm_hefy, 'Text', '');
+                app.hefyValue(1).ContextMenu = cm_hefy;
+                app.cms_he{2} = cm_hefy;
+
+                cm_hefz = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hefz'));
+                app.hefzMenu(1) = uimenu(cm_hefz, 'Text', '');
+                app.hefzValue(1).ContextMenu = cm_hefz;
+                app.cms_he{3} = cm_hefz;
+
+                cm_hemx = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hemx'));
+                app.hemxMenu(1) = uimenu(cm_hemx, 'Text', '');
+                app.hemxValue(1).ContextMenu = cm_hemx;
+                app.cms_he{4} = cm_hemx;
+
+                cm_hemy = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hemy'));
+                app.hemyMenu(1) = uimenu(cm_hemy, 'Text', '');
+                app.hemyValue(1).ContextMenu = cm_hemy;
+                app.cms_he{5} = cm_hemy;
+
+                cm_hemz = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'hemz'));
+                app.hemzMenu(1) = uimenu(cm_hemz, 'Text', '');
+                app.hemzValue(1).ContextMenu = cm_hemz;
+                app.cms_he{6} = cm_hemz;
+
+                cm_kp = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'kp'));
+                app.kpMenu(1) = uimenu(cm_kp, 'Text', '');
+                app.kpValue(1).ContextMenu = cm_kp;
+                app.cms_kpkmd{1} = cm_kp;
+
+                cm_k = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'k'));
+                app.kMenu(1) = uimenu(cm_k, 'Text', '');
+                app.kValue(1).ContextMenu = cm_k;
+                app.cms_kpkmd{2} = cm_k;
+
+                cm_ifcEquation = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'ifcEquation'));
+                app.ifcEquationMenu(1) = uimenu(cm_ifcEquation, 'Text', '');
+                app.ifcEquation(1).ContextMenu = cm_ifcEquation;
+                app.cms_ifcEquation{1} = cm_ifcEquation;
+            end
+            if app.MainMenus.SelectedObject == app.IFCIButton
+                cm_md = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'md'));
+                app.mdMenu(1) = uimenu(cm_md, 'Text', '');
+                app.mdValue(1).ContextMenu = cm_md;
+                app.cms_kpkmd{3} = cm_md;
             end
         end
 
         function cmDeleteIndex1(app)
-            types = {'cms_a', 'cms_alpha', 'cms_d', 'cms_theta', 'cms_rp', 'cms_icDot', 'cms_icDoubleDot', 'cms_dEquation', 'cms_mJoint', 'cms_IJoint', 'cms_kr', 'cms_sf', 'cms_vf', 'cms_mLink', 'cms_ILink'};
-            for t = 1:length(types)
-                field = types{t};
+            single_types = {'cms_a', 'cms_alpha', 'cms_d', 'cms_theta', 'cms_rp', 'cms_icDot', 'cms_icDoubleDot', 'cms_dEquation', 'cms_mJoint', 'cms_IJoint', 'cms_kr', 'cms_sf', 'cms_vf', 'cms_mLink', 'cms_ILink', 'cms_ifcEquation'};
+            for i = 1:length(single_types)
+                field = single_types{i};
                 if ~isempty(app.(field)) && length(app.(field)) >= 1 && ~isempty(app.(field){1}) && isvalid(app.(field){1})
                     delete(app.(field){1});
                     app.(field){1} = [];
+                end
+            end
+            for i = 1:3
+                if length(app.cms_g) >= i && ~isempty(app.cms_g{i}) && isvalid(app.cms_g{i})
+                    delete(app.cms_g{i}); app.cms_g{i} = [];
+                end
+                if length(app.cms_kpkmd) >= i && ~isempty(app.cms_kpkmd{i}) && isvalid(app.cms_kpkmd{i})
+                    delete(app.cms_kpkmd{i}); app.cms_kpkmd{i} = [];
+                end
+            end
+            for i = 1:6
+                if length(app.cms_he) >= i && ~isempty(app.cms_he{i}) && isvalid(app.cms_he{i})
+                    delete(app.cms_he{i}); app.cms_he{i} = [];
                 end
             end
         end
@@ -901,6 +1052,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
 
         % Code that executes after component creation
         function startupFcn(app)
+        app.UIFigure.Resize = 'off';
         app.rpValues{1} = 'Revolut';
 
         cmInitialize(app);
@@ -993,6 +1145,19 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 app.linkNumber(1).Visible = 'off';
                 app.mLinkValue(1).Visible = 'off';
                 app.ILinkValue(1).Visible = 'off';
+                app.gxValue.Visible = 'off';
+                app.gyValue.Visible = 'off';
+                app.gzValue.Visible = 'off';
+                app.hefxValue.Visible = 'off';
+                app.hefyValue.Visible = 'off';
+                app.hefzValue.Visible = 'off';
+                app.hemxValue.Visible = 'off';
+                app.hemyValue.Visible = 'off';
+                app.hemzValue.Visible = 'off';
+                app.kpValue.Visible = 'off';
+                app.kValue.Visible = 'off';
+                app.mdValue.Visible = 'off';
+                app.ifcEquation.Visible = 'off';
 
                 if ~isempty(app.cms_mJoint) && ~isempty(app.cms_mJoint{1}) && isvalid(app.cms_mJoint{1})
                     delete(app.cms_mJoint{1}); app.cms_mJoint{1} = [];
@@ -1015,6 +1180,15 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 if ~isempty(app.cms_ILink) && ~isempty(app.cms_ILink{1}) && isvalid(app.cms_ILink{1})
                     delete(app.cms_ILink{1}); app.cms_ILink{1} = [];
                 end
+                if ~isempty(app.cms_g) && ~isempty(app.cms_g{1}) && isvalid(app.cms_g{1})
+                    delete(app.cms_g{1}); app.cms_g{1} = [];
+                end
+                if ~isempty(app.cms_he) && ~isempty(app.cms_he{1}) && isvalid(app.cms_he{1})
+                    delete(app.cms_he{1}); app.cms_he{1} = [];
+                end
+                if ~isempty(app.cms_kpkmd) && ~isempty(app.cms_kpkmd{1}) && isvalid(app.cms_kpkmd{1})
+                    delete(app.cms_kpkmd{1}); app.cms_kpkmd{1} = [];
+                end
 
                 app.mJointLabel.Visible = 'off';
                 app.IJointLabel.Visible = 'off';
@@ -1024,6 +1198,13 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 app.mLinkLabel.Visible = 'off';
                 app.ILinkLabel.Visible = 'off';
                 app.LinksTableLabel.Visible = 'off';
+                app.gLabel.Visible = 'off';
+                app.heLabel.Visible = 'off';
+                app.kpLabel.Visible = 'off';
+                app.kLabel.Position = [105, 322, app.kLabel(1).Position(3), app.kLabel(1).Position(4)];
+                app.kLabel.Visible = 'off';
+                app.mdLabel.Visible = 'off';
+                app.ifcEquationLabel.Visible = 'off';
 
                 app.icDotValue(1).Visible = 'on';
                 app.icDoubleDotValue(1).Visible = 'on';
@@ -1064,6 +1245,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     delete(app.cms_vf{i});
                     delete(app.cms_mLink{i});
                     delete(app.cms_ILink{i});
+
                 end
                 %fprintf('pre %d now %d\n', app.menuPrevious, app.menuCurrent)
                 cmDeleteIndex1(app);
@@ -1082,6 +1264,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.icDotValue(1).Visible = 'off';
                     app.icDoubleDotValue(1).Visible = 'off';
                     app.dEquation(1).Visible = 'off';
+                    app.mdValue.Visible = 'off';
     
                     if ~isempty(app.cms_icDot) && ~isempty(app.cms_icDot{1}) && isvalid(app.cms_icDot{1})
                         delete(app.cms_icDot{1}); app.cms_icDot{1} = [];
@@ -1096,7 +1279,8 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.icDotLabel.Visible = 'off';
                     app.icDoubleDotLabel.Visible = 'off';
                     app.dEquationLabel.Visible = 'off';
-    
+                    app.mdLabel.Visible = 'off';
+                    
                     app.mJointValue(1).Visible = 'on';
                     app.IJointValue(1).Visible = 'on';
                     app.krValue(1).Visible = 'on';
@@ -1104,6 +1288,19 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.vfValue(1).Visible = 'on';
                     app.mLinkValue(1).Visible = 'on';
                     app.ILinkValue(1).Visible = 'on';
+                    app.gxValue.Visible = 'on';
+                    app.gyValue.Visible = 'on';
+                    app.gzValue.Visible = 'on';
+                    app.hefxValue.Visible = 'on';
+                    app.hefyValue.Visible = 'on';
+                    app.hefzValue.Visible = 'on';
+                    app.hemxValue.Visible = 'on';
+                    app.hemyValue.Visible = 'on';
+                    app.hemzValue.Visible = 'on';
+                    app.kpValue.Visible = 'on';
+                    app.kValue.Visible = 'on';
+                    app.ifcEquation.Visible = 'on';
+
                     app.mJointLabel.Visible = 'on';
                     app.IJointLabel.Visible = 'on';
                     app.krLabel.Visible = 'on';
@@ -1113,6 +1310,13 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.linkNumber(1).Visible = 'on';
                     app.mLinkLabel.Visible = 'on';
                     app.ILinkLabel.Visible = 'on';
+                    app.gLabel.Visible = 'on';
+                    app.heLabel.Visible = 'on';
+                    app.kpLabel.Visible = 'on';
+                    %app.kLabel.Position = [((app.kLabel(1).Position(1))), ((app.kLabel(1).Position(2)) + 1), app.kLabel(1).Position(3), app.kLabel(1).Position(4)];
+                    app.kLabel.Text = 'k';
+                    app.kLabel.Visible = 'on';
+                    app.ifcEquationLabel.Visible = 'on';
     
                     for i = (min(a)+1):max(a)
                         delete(app.jointNumber(i));
@@ -1136,6 +1340,10 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     end
                 else
                     fprintf('same in menu\n')
+                    app.mdValue.Visible = 'off';
+                    app.mdLabel.Visible = 'off';
+                    app.kLabel.Text = '$k$';
+                    app.kLabel.Position = [((app.kLabel(1).Position(1)) + 3), ((app.kLabel(1).Position(2)) + 1), app.kLabel(1).Position(3), app.kLabel(1).Position(4)];
                 end
                 cmDeleteIndex1(app);
                 cmInitialize(app);
@@ -1175,6 +1383,20 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.vfValue(1).Visible = 'on';
                     app.mLinkValue(1).Visible = 'on';
                     app.ILinkValue(1).Visible = 'on';
+                    app.gxValue.Visible = 'on';
+                    app.gyValue.Visible = 'on';
+                    app.gzValue.Visible = 'on';
+                    app.hefxValue.Visible = 'on';
+                    app.hefyValue.Visible = 'on';
+                    app.hefzValue.Visible = 'on';
+                    app.hemxValue.Visible = 'on';
+                    app.hemyValue.Visible = 'on';
+                    app.hemzValue.Visible = 'on';
+                    app.kpValue.Visible = 'on';
+                    app.kValue.Visible = 'on';
+                    app.mdValue.Visible = 'on';
+                    app.ifcEquation.Visible = 'on';
+
                     app.mJointLabel.Visible = 'on';
                     app.IJointLabel.Visible = 'on';
                     app.krLabel.Visible = 'on';
@@ -1184,6 +1406,14 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.linkNumber(1).Visible = 'on';
                     app.mLinkLabel.Visible = 'on';
                     app.ILinkLabel.Visible = 'on';
+                    app.gLabel.Visible = 'on';
+                    app.heLabel.Visible = 'on';
+                    app.kpLabel.Visible = 'on';
+                    app.kLabel.Text = '$k_D$';
+                    %app.kLabel.Position = [((app.kLabel(1).Position(1)) - 3), ((app.kLabel(1).Position(2)) - 1), app.kLabel(1).Position(3), app.kLabel(1).Position(4)];
+                    app.kLabel.Visible = 'on';
+                    app.mdLabel.Visible = 'on';
+                    app.ifcEquationLabel.Visible = 'on';
     
                     for i = (min(a)+1):max(a)
                         delete(app.jointNumber(i));
@@ -1207,6 +1437,10 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     end
                 else
                     fprintf('same in menu\n')
+                    app.mdValue.Visible = 'on';
+                    app.mdLabel.Visible = 'on';
+                    app.kLabel.Text = '$k_D$';
+                    app.kLabel.Position = [((app.kLabel(1).Position(1)) - 3), ((app.kLabel(1).Position(2)) - 1), app.kLabel(1).Position(3), app.kLabel(1).Position(4)];
                 end
                 cmDeleteIndex1(app);
                 cmInitialize(app);
@@ -1259,6 +1493,83 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         function ILinkValueValueChanged(app, event)
             app.ILinkValues(find(app.ILinkValue == event.Source)) = event.Value;
             fprintf('Box number %d was changed to %f\n', find(app.ILinkValue == event.Source), event.Value);       
+        end
+
+        % Button pushed function: SolveButton
+        function SolveButtonPushed(app, event)
+            app.solving = 1;
+        end
+
+        % Value changed function: kpValue
+        function kpValueValueChanged(app, event)
+            app.kpkmdValues(1) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.kpValue == event.Source), event.Value);    
+        end
+
+        % Value changed function: kValue
+        function kValueValueChanged(app, event)
+            app.kpkmdValues(2) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.kValue == event.Source), event.Value);    
+        end
+
+        % Value changed function: mdValue
+        function mdValueValueChanged(app, event)
+            app.kpkmdValues(3) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.mdValue == event.Source), event.Value);    
+        end
+
+        % Value changed function: gxValue
+        function gxValueValueChanged(app, event)
+            app.gValues(1) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.gxValue == event.Source), event.Value);    
+        end
+
+        % Value changed function: gyValue
+        function gyValueValueChanged(app, event)
+            app.gValues(2) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.gyValue == event.Source), event.Value);   
+        end
+
+        % Value changed function: gzValue
+        function gzValueValueChanged(app, event)
+            app.gValues(3) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.gzValue == event.Source), event.Value);  
+        end
+
+        % Value changed function: hefxValue
+        function hefxValueValueChanged(app, event)
+            app.heValues(1) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hefxValue == event.Source), event.Value); 
+        end
+
+        % Value changed function: hefyValue
+        function hefyValueValueChanged(app, event)
+            app.heValues(2) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hefyValue == event.Source), event.Value); 
+        end
+
+        % Value changed function: hefzValue
+        function hefzValueValueChanged(app, event)
+            app.heValues(3) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hefzValue == event.Source), event.Value);
+        end
+
+        % Value changed function: hemxValue
+        function hemxValueValueChanged(app, event)
+            app.heValues(4) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hemxValue == event.Source), event.Value);
+        end
+
+        % Value changed function: hemyValue
+        function hemyValueValueChanged(app, event)
+            app.heValues(5) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hemyValue == event.Source), event.Value);
+        end
+
+        % Value changed function: hemzValue
+        function hemzValueValueChanged(app, event)
+            app.heValues(6) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.hemzValue == event.Source), event.Value);
         end
 
         % Changes arrangement of the app based on UIFigure width
@@ -1429,6 +1740,142 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.linkNumber.Position = [7 303 20 22];
             app.linkNumber.Text = '1';
 
+            % Create gLabel
+            app.gLabel = uilabel(app.LeftPanel);
+            app.gLabel.FontName = 'Times New Roman';
+            app.gLabel.Visible = 'off';
+            app.gLabel.Interpreter = 'latex';
+            app.gLabel.Position = [154 283 28 22];
+            app.gLabel.Text = 'g =';
+
+            % Create gyValue
+            app.gyValue = uieditfield(app.LeftPanel, 'numeric');
+            app.gyValue.ValueChangedFcn = createCallbackFcn(app, @gyValueValueChanged, true);
+            app.gyValue.Visible = 'off';
+            app.gyValue.Position = [179 284 20 20];
+
+            % Create gxValue
+            app.gxValue = uieditfield(app.LeftPanel, 'numeric');
+            app.gxValue.ValueChangedFcn = createCallbackFcn(app, @gxValueValueChanged, true);
+            app.gxValue.Visible = 'off';
+            app.gxValue.Position = [179 304 20 20];
+
+            % Create gzValue
+            app.gzValue = uieditfield(app.LeftPanel, 'numeric');
+            app.gzValue.ValueChangedFcn = createCallbackFcn(app, @gzValueValueChanged, true);
+            app.gzValue.Visible = 'off';
+            app.gzValue.Position = [179 264 20 20];
+
+            % Create SolveButton
+            app.SolveButton = uibutton(app.LeftPanel, 'push');
+            app.SolveButton.ButtonPushedFcn = createCallbackFcn(app, @SolveButtonPushed, true);
+            app.SolveButton.Position = [19 82 100 23];
+            app.SolveButton.Text = 'Solve';
+
+            % Create heLabel
+            app.heLabel = uilabel(app.LeftPanel);
+            app.heLabel.FontName = 'Times New Roman';
+            app.heLabel.Visible = 'off';
+            app.heLabel.Interpreter = 'latex';
+            app.heLabel.Position = [210 253 32 22];
+            app.heLabel.Text = '$h_e$ =';
+
+            % Create hefyValue
+            app.hefyValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hefyValue.ValueChangedFcn = createCallbackFcn(app, @hefyValueValueChanged, true);
+            app.hefyValue.Visible = 'off';
+            app.hefyValue.Position = [239 284 20 20];
+
+            % Create hefxValue
+            app.hefxValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hefxValue.ValueChangedFcn = createCallbackFcn(app, @hefxValueValueChanged, true);
+            app.hefxValue.Visible = 'off';
+            app.hefxValue.Position = [239 304 20 20];
+
+            % Create hefzValue
+            app.hefzValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hefzValue.ValueChangedFcn = createCallbackFcn(app, @hefzValueValueChanged, true);
+            app.hefzValue.Visible = 'off';
+            app.hefzValue.Position = [239 264 20 20];
+
+            % Create hemyValue
+            app.hemyValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hemyValue.ValueChangedFcn = createCallbackFcn(app, @hemyValueValueChanged, true);
+            app.hemyValue.Visible = 'off';
+            app.hemyValue.Position = [239 224 20 20];
+
+            % Create hemxValue
+            app.hemxValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hemxValue.ValueChangedFcn = createCallbackFcn(app, @hemxValueValueChanged, true);
+            app.hemxValue.Visible = 'off';
+            app.hemxValue.Position = [239 244 20 20];
+
+            % Create hemzValue
+            app.hemzValue = uieditfield(app.LeftPanel, 'numeric');
+            app.hemzValue.ValueChangedFcn = createCallbackFcn(app, @hemzValueValueChanged, true);
+            app.hemzValue.Visible = 'off';
+            app.hemzValue.Position = [239 204 20 20];
+
+            % Create kpValue
+            app.kpValue = uieditfield(app.LeftPanel, 'numeric');
+            app.kpValue.ValueChangedFcn = createCallbackFcn(app, @kpValueValueChanged, true);
+            app.kpValue.Visible = 'off';
+            app.kpValue.Position = [79 304 20 20];
+
+            % Create kValue
+            app.kValue = uieditfield(app.LeftPanel, 'numeric');
+            app.kValue.ValueChangedFcn = createCallbackFcn(app, @kValueValueChanged, true);
+            app.kValue.Visible = 'off';
+            app.kValue.Position = [99 304 20 20];
+
+            % Create mdValue
+            app.mdValue = uieditfield(app.LeftPanel, 'numeric');
+            app.mdValue.ValueChangedFcn = createCallbackFcn(app, @mdValueValueChanged, true);
+            app.mdValue.Visible = 'off';
+            app.mdValue.Position = [119 304 20 20];
+
+            % Create kpLabel
+            app.kpLabel = uilabel(app.LeftPanel);
+            app.kpLabel.Visible = 'off';
+            app.kpLabel.Interpreter = 'latex';
+            app.kpLabel.Position = [84 322 16 22];
+            app.kpLabel.Text = '$k_p$';
+
+            % Create kLabel
+            app.kLabel = uilabel(app.LeftPanel);
+            app.kLabel.Visible = 'off';
+            app.kLabel.Interpreter = 'latex';
+            app.kLabel.Position = [105 322 30 22];
+            app.kLabel.Text = '$k$';
+
+            % Create mdLabel
+            app.mdLabel = uilabel(app.LeftPanel);
+            app.mdLabel.Visible = 'off';
+            app.mdLabel.Interpreter = 'latex';
+            app.mdLabel.Position = [120 321 19 22];
+            app.mdLabel.Text = '$M_d$';
+
+            % Create ifcEquation
+            app.ifcEquation = uieditfield(app.LeftPanel, 'text');
+            app.ifcEquation.Visible = 'off';
+            app.ifcEquation.Position = [79 244 60 20];
+
+            % Create ifcEquationLabel
+            app.ifcEquationLabel = uilabel(app.LeftPanel);
+            app.ifcEquationLabel.Visible = 'off';
+            app.ifcEquationLabel.Position = [85 263 49 22];
+            app.ifcEquationLabel.Text = 'Equation';
+
+            % Create ILinkValue_19
+            app.ILinkValue_19 = uieditfield(app.LeftPanel, 'numeric');
+            app.ILinkValue_19.Visible = 'off';
+            app.ILinkValue_19.Position = [59 284 20 20];
+
+            % Create ILinkValue_20
+            app.ILinkValue_20 = uieditfield(app.LeftPanel, 'numeric');
+            app.ILinkValue_20.Visible = 'off';
+            app.ILinkValue_20.Position = [59 264 20 20];
+
             % Create RightPanel
             app.RightPanel = uipanel(app.GridLayout);
             app.RightPanel.Layout.Row = 1;
@@ -1475,8 +1922,9 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.krLabel = uilabel(app.UIFigure);
             app.krLabel.FontSize = 14;
             app.krLabel.Visible = 'off';
-            app.krLabel.Position = [209 654 12 22];
-            app.krLabel.Text = 'kᵣ';
+            app.krLabel.Interpreter = 'latex';
+            app.krLabel.Position = [206 653 25 22];
+            app.krLabel.Text = '$k_r$';
 
             % Create sfLabel
             app.sfLabel = uilabel(app.UIFigure);
@@ -1494,13 +1942,6 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.jointNumber = uilabel(app.UIFigure);
             app.jointNumber.Position = [7 634 20 22];
             app.jointNumber.Text = '1';
-
-            % Create thetaVarValue
-            app.thetaVarValue = uieditfield(app.UIFigure, 'text');
-            app.thetaVarValue.InputType = 'alphanumerics';
-            app.thetaVarValue.Visible = 'off';
-            app.thetaVarValue.Position = [100 635 20 20];
-            app.thetaVarValue.Value = 'd2';
 
             % Create icDotValue
             app.icDotValue = uieditfield(app.UIFigure, 'numeric');
@@ -1585,6 +2026,45 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
 
             % Create mLinkMenu
             app.mLinkMenu = uimenu(app.ContextMenu);
+
+            % Create gxMenu
+            app.gxMenu = uimenu(app.ContextMenu);
+
+            % Create gyMenu
+            app.gyMenu = uimenu(app.ContextMenu);
+
+            % Create gzMenu
+            app.gzMenu = uimenu(app.ContextMenu);
+
+            % Create hefxMenu
+            app.hefxMenu = uimenu(app.ContextMenu);
+
+            % Create hefyMenu
+            app.hefyMenu = uimenu(app.ContextMenu);
+
+            % Create hefzMenu
+            app.hefzMenu = uimenu(app.ContextMenu);
+
+            % Create hemxMenu
+            app.hemxMenu = uimenu(app.ContextMenu);
+
+            % Create hemyMenu
+            app.hemyMenu = uimenu(app.ContextMenu);
+
+            % Create hemzMenu
+            app.hemzMenu = uimenu(app.ContextMenu);
+
+            % Create kpMenu
+            app.kpMenu = uimenu(app.ContextMenu);
+
+            % Create kMenu
+            app.kMenu = uimenu(app.ContextMenu);
+
+            % Create mdMenu
+            app.mdMenu = uimenu(app.ContextMenu);
+
+            % Create ifcEquationMenu
+            app.ifcEquationMenu = uimenu(app.ContextMenu);
 
             % Create ILinkMenu
             app.ILinkMenu = uimenu(app.ContextMenu);
