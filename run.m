@@ -2,47 +2,48 @@ clear all; clc; close all;
 
 %% initial inputs (DH table and joint types, parameters optional)
 
-% example: from input app
-% input_ui = MAE547_Final_Project_App();
-% disp(input_ui)
-% 
-% waitfor(input_ui, 'jointCount', 5)
-% x = input_ui.jointCount;
-
-% configuration input (essential)
-% a     = input_ui.aValues;
-% alpha = input_ui.alphaValues;
-% d     = input_ui.dValues;
-% theta = input_ui.thetaValues;
-% rp    = input_ui.rpValues;
-% 
-% 
-% dh_raw = [a',alpha',d',theta'];
-% joint_types = extractBefore(string(rp), 2);
-% 
-% 
-% disp(dh_raw)
-% disp(joint_types)
-% 
-% 
-% delete(input_ui)
-% 
-% g0          = input_ui.g0;
-% params      = input_ui.params;
-
-% example: cylindrical robot
-dh_raw = [0,     0,  0,     0;
-          0, -pi/2,  0,     0;
-          0,     0,  0,     0];
-joint_types = ["R"; "P"; "P"];
+testmode = true; % example: cylindrical robot
 
 g0 = [0 0 -9.81];
 
-params.m_l = [1, 1, 1];
-params.m_m = [0.1 0.1 0.1];
-params.I_l = [0.01 0.01 0.01];
-params.I_m = [0.001 0.001 0.001];
-params.k_r = [10 10 10];
+if testmode
+    dh_raw = [0,     0,  0,     0;
+              0, -pi/2,  0,     0;
+              0,     0,  0,     0];
+    joint_types = ["R"; "P"; "P"];
+      
+    params.m_l = [3, 3, 3];
+    params.m_m = [0.1 0.1 0.1];
+    params.I_l = [0.01 0.01 0.01];
+    params.I_m = [0.001 0.001 0.001];
+    params.k_r = [10 10 10];
+else
+    input_ui = MAE547_Final_Project_App();
+    disp(input_ui)
+    
+    waitfor(input_ui, 'solving', 1)
+    x = input_ui.jointCount;
+
+    a     = input_ui.aValues;
+    alpha = input_ui.alphaValues;
+    d     = input_ui.dValues;
+    theta = input_ui.thetaValues;
+    rp    = input_ui.rpValues;
+
+    dh_raw = [a',alpha',d',theta'];
+    joint_types = extractBefore(string(rp), 2);
+    
+    params.m_l = input_ui.mLinkValues;
+    params.I_l = input_ui.ILinkValues;
+    params.m_m = input_ui.mJointValues;
+    params.I_m = input_ui.IJointValues;
+    params.k_r = input_ui.krValues;
+    
+    delete(input_ui)
+end
+% 
+% disp(dh_raw)
+% disp(joint_types)
 
 %% generate symbolic variables
 
@@ -52,10 +53,13 @@ if size(dh_raw, 1) ~= N
     return
 else
     fprintf("Robot specified with %d joints, with types %s\n", N, join(joint_types));
+    
 end
 
 q = sym('q',[1 N]);
+dq = sym('dq',[1 N]);
 assume(q, 'real')
+assume(dq, 'real')
 
 dh = sym(dh_raw);
 for i=1:N
@@ -67,6 +71,9 @@ for i=1:N
         disp("Specify joint types as 'R' or 'P'")
     end
 end
+
+disp("DH Table: ")
+disp(dh)
 
 m_l = sym('m_l', [N 1]); % link masses
 m_m = sym('m_m', [N 1]); % motor masses
@@ -83,6 +90,8 @@ if exist('params', 'var')
         I_m = sym(params.I_m);
         k_r = sym(params.k_r);
         mode = 'numeric';
+        disp("Successfully input parameters, solving numerically")
+
     catch exception
         disp("Incomplete parameters, solving symbolically")
         m_l = sym('m_l', [N 1]); 
@@ -98,9 +107,55 @@ end
 
 %% get equations of motion
 
+disp("Calculating equations of motion")
 [EOM2] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0, joint_types);
 
-B = EOM2.B;
-C = EOM2.c;
-G = EOM2.G;
+
+q = EOM2.Q.q;
+dq = EOM2.Q.qd;
+qdq = [q;dq];
+
+B(q) = EOM2.B;
+C(qdq) = EOM2.c;
+G(q) = EOM2.G;
+
+disp("B(q):")
+disp(B)
+
+disp("C(q, dq):")
+disp(C)
+
+disp("G(q):")
+disp(G)
+
+B = matlabFunction(B);
+C = matlabFunction(C);
+G = matlabFunction(G);
+
+%% simulink test
+
+t_i = 0;
+t_f = 10;
+
+
+dimensions = 4;
+X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
+dX_d = diff(X_d);
+d2X_d = diff(X_d, 2);
+
+
+X_d = matlabFunction(X_d);
+dX_d = matlabFunction(dX_d);
+d2X_d = matlabFunction(d2X_d);
+
+disp("Starting simulink...")
+sim("inversedynamicstest.slx");
+
+
+
+
+
+
+
+
 
