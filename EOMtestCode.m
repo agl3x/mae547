@@ -34,7 +34,7 @@ params.IM2 = 0.01;
 params.kr1 = 10;
 params.kr2 = 10;
 
-simulate_EOM(EOM1,params,u,[0,0],[0,0],[0,10])
+[t_out1,q_out1,q_out2]=DynSim_EOM(EOM1,params,u,[0,0],[0,0],[0,10]);
 
 %% Case 2 - 2 prismatic
 syms kr1 kr2  d1 d2 m1 m2 mm1 mm2 IL1 IL2 IM1 IM2
