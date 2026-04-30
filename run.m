@@ -1,33 +1,48 @@
 clear all; clc; close all;
-clear all; clc; close all;
 
 %% initial inputs (DH table and joint types, parameters optional)
 
 % example: from input app
-input = MAE547_Final_Project_App();
-uiwait(input.UIFigure)
+% input_ui = MAE547_Final_Project_App();
+% disp(input_ui)
+% 
+% waitfor(input_ui, 'jointCount', 5)
+% x = input_ui.jointCount;
 
-x = input.jointCount;
-disp(x)
-
-dh_raw      = input.dh_raw;
-joint_types = input.joint_types;
-g0          = input.g0;
-params      = input.params;
+% configuration input (essential)
+% a     = input_ui.aValues;
+% alpha = input_ui.alphaValues;
+% d     = input_ui.dValues;
+% theta = input_ui.thetaValues;
+% rp    = input_ui.rpValues;
+% 
+% 
+% dh_raw = [a',alpha',d',theta'];
+% joint_types = extractBefore(string(rp), 2);
+% 
+% 
+% disp(dh_raw)
+% disp(joint_types)
+% 
+% 
+% delete(input_ui)
+% 
+% g0          = input_ui.g0;
+% params      = input_ui.params;
 
 % example: cylindrical robot
-% dh_raw = [0,     0,  0,     0;
-%           0, -pi/2,  0,     0;
-%           0,     0,  0,     0];
-% joint_types = ["R"; "P"; "P"];
-% 
-% g0 = [0 0 -9.81];
-% 
-% params.m_l = [1, 1, 1];
-% params.m_m = [0.1 0.1 0.1];
-% params.I_l = [0.01 0.01 0.01];
-% params.I_m = [0.001 0.001 0.001];
-% params.k_r = [10 10 10];
+dh_raw = [0,     0,  0,     0;
+          0, -pi/2,  0,     0;
+          0,     0,  0,     0];
+joint_types = ["R"; "P"; "P"];
+
+g0 = [0 0 -9.81];
+
+params.m_l = [1, 1, 1];
+params.m_m = [0.1 0.1 0.1];
+params.I_l = [0.01 0.01 0.01];
+params.I_m = [0.001 0.001 0.001];
+params.k_r = [10 10 10];
 
 %% generate symbolic variables
 
