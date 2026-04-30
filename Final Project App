@@ -5,6 +5,13 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         UIFigure                      matlab.ui.Figure
         GridLayout                    matlab.ui.container.GridLayout
         LeftPanel                     matlab.ui.container.Panel
+        linkNumber                    matlab.ui.control.Label
+        LinksTableLabel               matlab.ui.control.Label
+        ILinkLabel                    matlab.ui.control.Label
+        mLinkLabel                    matlab.ui.control.Label
+        ILinkValue                    matlab.ui.control.NumericEditField
+        mLinkValue                    matlab.ui.control.NumericEditField
+        JointsTableLabel              matlab.ui.control.Label
         MainMenus                     matlab.ui.container.ButtonGroup
         IFCIButton                    matlab.ui.control.ToggleButton
         IFCCButton                    matlab.ui.control.ToggleButton
@@ -52,6 +59,8 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         sfMenu                        matlab.ui.container.Menu
         vfMenu                        matlab.ui.container.Menu
         icDotMenu                     matlab.ui.container.Menu
+        mLinkMenu                     matlab.ui.container.Menu
+        ILinkMenu                     matlab.ui.container.Menu
         icDoubleDotMenu               matlab.ui.container.Menu
         dEquationMenu                 matlab.ui.container.Menu
     end
@@ -65,6 +74,8 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
     properties (Access = public)
         jointCount = 1;
         jointCountPrevious = 1;
+        menuPrevious = 1;
+        menuCurrent = 1;
 
         aValues = [];
         alphaValues = [];
@@ -81,6 +92,8 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         krValues = [];
         sfValues = [];
         vfValues = [];
+        mLinkValues = [];
+        ILinkValues = [];
 
         cms_a = {};
         cms_alpha = {};
@@ -95,6 +108,8 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         cms_kr = {};
         cms_sf = {};
         cms_vf = {};
+        cms_mLink = {};
+        cms_ILink = {};
 
     end
 
@@ -136,7 +151,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                         app.icDoubleDotMenu(i).Text = sprintf('Joint %d Initial Acceleration: %s m/s²', i, num2str(app.icDoubleDotValue(i).Value));
                     end
                 case 'dEquation'
-                    app.dEquationMenu(i).Text = sprintf('Joint %d EOM: %s', i, num2str(app.dEquation(i).Value));
+                    app.dEquationMenu(i).Text = sprintf('Joint %d τ: %s', i, num2str(app.dEquation(i).Value));
                 case 'mJoint'
                     app.mJointMenu(i).Text = sprintf('Joint %d Mass: %s kg', i, num2str(app.mJointValue(i).Value));
                 case 'IJoint'
@@ -147,6 +162,10 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     app.sfMenu(i).Text = sprintf('Joint %d Static Friction: %s', i, num2str(app.sfValue(i).Value));
                 case 'vf'
                     app.vfMenu(i).Text = sprintf('Joint %d Viscous Friction: %s', i, num2str(app.vfValue(i).Value));
+                case 'mLink'
+                    app.mLinkMenu(i).Text = sprintf('Link %d Mass: %s kg', i, num2str(app.mLinkValue(i).Value));
+                case 'ILink'
+                    app.ILinkMenu(i).Text = sprintf('Link %d Moment of Inertia: %s kg·m²', i, num2str(app.ILinkValue(i).Value));
             end
         end
 
@@ -154,6 +173,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
 
             fprintf('Joint Count = %d\n',app.jointCount);
             fprintf('Previous Joint Count = %d\n',app.jointCountPrevious);
+            fprintf('%d to %d\n', app.menuPrevious, app.menuCurrent)
 
             if app.MainMenus.SelectedObject == app.DynamicsButton
 
@@ -192,11 +212,10 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                         app.dValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
                         app.thetaValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
                         app.rpValue(i) = uidropdown(app.UIFigure, 'Items', {'Revolut', 'Prismatic'}, 'Value', 'Revolut');
-                        %app.rpValues{i} = 'Revolut';
                         app.icDotValue(i) = uieditfield(app.UIFigure, 'numeric');
                         app.icDoubleDotValue(i) = uieditfield(app.UIFigure, 'numeric');
                         app.dEquation(i) = uieditfield(app.UIFigure, 'text');
-    
+                        
                         app.aValue(i).ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
                         app.alphaValue(i).ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
                         app.dValue(i).ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
@@ -204,7 +223,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                         app.rpValue(i).ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
                         app.icDotValue(i).ValueChangedFcn = createCallbackFcn(app, @icDotValueValueChanged, true);
                         app.icDoubleDotValue(i).ValueChangedFcn = createCallbackFcn(app, @icDoubleDotValueValueChanged, true);
-                        app.dEquation(i).ValueChangedFcn = createCallbackFcn(app, @dEquationValueChanged, true);                        
+                        app.dEquation(i).ValueChangedFcn = createCallbackFcn(app, @dEquationValueChanged, true);    
                         
                         if i == 10
                             app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) - 3), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
@@ -219,7 +238,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                         app.icDotValue(i).Position = [((app.icDotValue(1).Position(1))), ((app.icDotValue(1).Position(2))) - 20*(i-1), app.icDotValue(1).Position(3), app.icDotValue(1).Position(4)];
                         app.icDoubleDotValue(i).Position = [((app.icDoubleDotValue(1).Position(1))), ((app.icDoubleDotValue(1).Position(2))) - 20*(i-1), app.icDoubleDotValue(1).Position(3), app.icDoubleDotValue(1).Position(4)];
                         app.dEquation(i).Position = [((app.dEquation(1).Position(1))), ((app.dEquation(1).Position(2))) - 20*(i-1), app.dEquation(1).Position(3), app.dEquation(1).Position(4)];
-    
+                        
                         cm_a = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'a'));
                         app.aMenu(i) = uimenu(cm_a, 'Text', '');
                         app.aValue(i).ContextMenu = cm_a;
@@ -266,37 +285,26 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                             app.aValue(i).Value = app.aValues(i);
                         else
                             app.aValue(i).Value = 0;
+                            app.aValues(i) = 0;
                         end
                         if i <= length(app.alphaValues)
                             app.alphaValue(i).Value = app.alphaValues(i);
                         else
                             app.alphaValue(i).Value = 0;
+                            app.alphaValues(i) = 0;
                         end
                         if i <= length(app.dValues)
                             app.dValue(i).Value = app.dValues(i);
                         else
                             app.dValue(i).Value = 0;
+                            app.dValues(i) = 0;
                         end
                         if i <= length(app.thetaValues)
                             app.thetaValue(i).Value = app.thetaValues(i);
                         else
                             app.thetaValue(i).Value = 0;
+                            app.thetaValues(i) = 0;
                         end
-                        %{
-                        if strcmp(app.rpValues{i}, 'Revolut')
-                            if i <= length(app.thetaValues)
-                                app.thetaValue(i).Value = app.thetaValues(i);
-                            else
-                                app.thetaValue(i).Value = 0;
-                            end
-                        else
-                            if i <= length(app.thetaValues)
-                                app.thetaValue(i).Value = app.thetaValues(i);
-                            else
-                                app.thetaValue(i).Value = 0;
-                            end
-                        end
-                        %}
                         if i <= length(app.rpValues) && ~isempty(app.rpValues{i})
                             fprintf('rpValues{%d} = "%s"\n', i, app.rpValues{i});
                             app.rpValue(i).Value = app.rpValues{i};
@@ -308,208 +316,490 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                             app.icDotValue(i).Value = app.icDotValues(i);
                         else
                             app.icDotValue(i).Value = 0;
+                            app.icDotValues(i) = 0;
                         end
                         if i <= length(app.icDoubleDotValues)
                             app.icDoubleDotValue(i).Value = app.icDoubleDotValues(i);
                         else
                             app.icDoubleDotValue(i).Value = 0;
+                            app.icDoubleDotValues(i) = 0;
                         end
                         if i <= length(app.dEquations)
                             if ~isempty(app.dEquations{i})
                                 app.dEquation(i).Value = app.dEquations{i};
                             else
                                 app.dEquation(i).Value = '';
+                                %app.dEquations(i) = '';
                             end
                         else
                             app.dEquation(i).Value = '';
+                            %app.dEquations(i) = '';
                         end  
                     end
                 end
                 app.jointCountPrevious = app.jointCount;
+                %app.menuPrevious = 1;
             end
             if app.MainMenus.SelectedObject == app.IFCCButton
-                fprintf('%d Pre: %d\n', app.jointCount, app.jointCountPrevious)
+                fprintf('%d to %d\n', app.jointCountPrevious, app.jointCount)
 
                 a = [app.jointCount; app.jointCountPrevious];
 
-                for i = (min(a)+1):max(a)
-                    fprintf('%d\n', i)
-                    if app.jointCountPrevious > app.jointCount
-                        fprintf('del\n')
-                        delete(app.jointNumber(i));
-                        delete(app.aValue(i));
-                        delete(app.alphaValue(i));
-                        delete(app.dValue(i));
-                        delete(app.thetaValue(i));
-                        delete(app.rpValue(i));
+                %if app.menuPrevious == 1
+                    for i = (min(a)+1):max(a)
+                        fprintf('%d\n', i)
+                        if app.jointCountPrevious > app.jointCount
+                            fprintf('del\n')
+                            delete(app.jointNumber(i));
+                            delete(app.aValue(i));
+                            delete(app.alphaValue(i));
+                            delete(app.dValue(i));
+                            delete(app.thetaValue(i));
+                            delete(app.rpValue(i));
+    
+                            delete(app.mJointValue(i));
+                            delete(app.IJointValue(i));
+                            delete(app.krValue(i));
+                            delete(app.sfValue(i));
+                            delete(app.vfValue(i));
+                            delete(app.linkNumber(i));
+                            delete(app.mLinkValue(i));
+                            delete(app.ILinkValue(i));
+    
+                            delete(app.cms_a{i});
+                            delete(app.cms_alpha{i});
+                            delete(app.cms_d{i});
+                            delete(app.cms_theta{i});
+                            delete(app.cms_rp{i});
+                            delete(app.cms_mJoint{i});
+                            delete(app.cms_IJoint{i});
+                            delete(app.cms_kr{i});
+                            delete(app.cms_sf{i});
+                            delete(app.cms_vf{i});
+                            delete(app.cms_mLink{i});
+                            delete(app.cms_ILink{i});
+    
+                        else
+                            fprintf('add\n')
+                            app.jointNumber(i) = uilabel(app.UIFigure, 'Text', num2str(i));
+                            app.aValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.alphaValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.dValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
+                            app.thetaValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
+                            app.rpValue(i) = uidropdown(app.UIFigure, 'Items', {'Revolut', 'Prismatic'}, 'Value', 'Revolut');
+                            app.mJointValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.IJointValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.krValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.sfValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.vfValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.linkNumber(i) = uilabel(app.UIFigure, 'Text', num2str(i));
+                            app.mLinkValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.ILinkValue(i) = uieditfield(app.UIFigure, 'numeric');
+        
+                            app.aValue(i).ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
+                            app.alphaValue(i).ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
+                            app.dValue(i).ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
+                            app.thetaValue(i).ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
+                            app.rpValue(i).ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
+                            app.mJointValue(i).ValueChangedFcn = createCallbackFcn(app, @mJointValueValueChanged, true);
+                            app.IJointValue(i).ValueChangedFcn = createCallbackFcn(app, @IJointValueValueChanged, true);
+                            app.krValue(i).ValueChangedFcn = createCallbackFcn(app, @krValueValueChanged, true);
+                            app.sfValue(i).ValueChangedFcn = createCallbackFcn(app, @sfValueValueChanged, true);
+                            app.vfValue(i).ValueChangedFcn = createCallbackFcn(app, @vfValueValueChanged, true);
+                            app.mLinkValue(i).ValueChangedFcn = createCallbackFcn(app, @mLinkValueValueChanged, true);
+                            app.ILinkValue(i).ValueChangedFcn = createCallbackFcn(app, @ILinkValueValueChanged, true);
+        
+                            if i == 10
+                                app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) - 3), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
+                                app.linkNumber(i).Position = [((app.linkNumber(1).Position(1)) - 3), ((app.linkNumber(1).Position(2)) + 1) - 20*(i-1), app.linkNumber(1).Position(3), app.linkNumber(1).Position(4)];
+                            else
+                                app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) + 1), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
+                                app.linkNumber(i).Position = [((app.linkNumber(1).Position(1)) + 1), ((app.linkNumber(1).Position(2)) + 1) - 20*(i-1), app.linkNumber(1).Position(3), app.linkNumber(1).Position(4)];
+                            end
+                            app.aValue(i).Position = [((app.aValue(1).Position(1)) + 1), ((app.aValue(1).Position(2)) + 1) - 20*(i-1), app.aValue(1).Position(3), app.aValue(1).Position(4)];
+                            app.alphaValue(i).Position = [((app.alphaValue(1).Position(1)) + 1), ((app.alphaValue(1).Position(2)) + 1) - 20*(i-1), app.alphaValue(1).Position(3), app.alphaValue(1).Position(4)];
+                            app.dValue(i).Position = [((app.dValue(1).Position(1)) + 1), ((app.dValue(1).Position(2)) + 1) - 20*(i-1), app.dValue(1).Position(3), app.dValue(1).Position(4)];
+                            app.thetaValue(i).Position = [((app.thetaValue(1).Position(1)) + 1), ((app.thetaValue(1).Position(2)) + 1) - 20*(i-1), app.thetaValue(1).Position(3), app.thetaValue(1).Position(4)]; 
+                            app.rpValue(i).Position = [((app.rpValue(1).Position(1))), ((app.rpValue(1).Position(2))) - 20*(i-1), app.rpValue(1).Position(3), app.rpValue(1).Position(4)];
+                            app.mJointValue(i).Position = [((app.mJointValue(1).Position(1))), ((app.mJointValue(1).Position(2))) - 20*(i-1), app.mJointValue(1).Position(3), app.mJointValue(1).Position(4)];
+                            app.IJointValue(i).Position = [((app.IJointValue(1).Position(1))), ((app.IJointValue(1).Position(2))) - 20*(i-1), app.IJointValue(1).Position(3), app.IJointValue(1).Position(4)];
+                            app.krValue(i).Position = [((app.krValue(1).Position(1))), ((app.krValue(1).Position(2))) - 20*(i-1), app.krValue(1).Position(3), app.krValue(1).Position(4)];
+                            app.sfValue(i).Position = [((app.sfValue(1).Position(1))), ((app.sfValue(1).Position(2))) - 20*(i-1), app.sfValue(1).Position(3), app.sfValue(1).Position(4)];
+                            app.vfValue(i).Position = [((app.vfValue(1).Position(1))), ((app.vfValue(1).Position(2))) - 20*(i-1), app.vfValue(1).Position(3), app.vfValue(1).Position(4)];                    
+                            app.mLinkValue(i).Position = [((app.mLinkValue(1).Position(1)) + 1), ((app.mLinkValue(1).Position(2)) + 1) - 20*(i-1), app.mLinkValue(1).Position(3), app.mLinkValue(1).Position(4)];
+                            app.ILinkValue(i).Position = [((app.ILinkValue(1).Position(1)) + 1), ((app.ILinkValue(1).Position(2)) + 1) - 20*(i-1), app.ILinkValue(1).Position(3), app.ILinkValue(1).Position(4)];
 
-                        delete(app.mJointValue(i));
-                        delete(app.IJointValue(i));
-                        delete(app.krValue(i));
-                        delete(app.sfValue(i));
-                        delete(app.vfValue(i));
+                            cm_a = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'a'));
+                            app.aMenu(i) = uimenu(cm_a, 'Text', '');
+                            app.aValue(i).ContextMenu = cm_a;
+                            app.cms_a{i} = cm_a;
+        
+                            cm_alpha = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'alpha'));
+                            app.alphaMenu(i) = uimenu(cm_alpha, 'Text', '');
+                            app.alphaValue(i).ContextMenu = cm_alpha;
+                            app.cms_alpha{i} = cm_alpha;
+        
+                            cm_d = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'd'));
+                            app.dMenu(i) = uimenu(cm_d, 'Text', '');
+                            app.dValue(i).ContextMenu = cm_d;
+                            app.cms_d{i} = cm_d;
+        
+                            cm_theta = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'theta'));
+                            app.thetaMenu(i) = uimenu(cm_theta, 'Text', '');
+                            app.thetaValue(i).ContextMenu = cm_theta;
+                            app.cms_theta{i} = cm_theta;
+        
+                            cm_rp = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'rp'));
+                            app.rpMenu(i) = uimenu(cm_rp, 'Text', '');
+                            app.rpValue(i).ContextMenu = cm_rp;
+                            app.cms_rp{i} = cm_rp;
+        
+                            cm_mJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'mJoint'));
+                            app.mJointMenu(i) = uimenu(cm_mJoint, 'Text', '');
+                            app.mJointValue(i).ContextMenu = cm_mJoint;
+                            app.cms_mJoint{i} = cm_mJoint;
+        
+                            cm_IJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'IJoint'));
+                            app.IJointMenu(i) = uimenu(cm_IJoint, 'Text', '');
+                            app.IJointValue(i).ContextMenu = cm_IJoint;
+                            app.cms_IJoint{i} = cm_IJoint;
+        
+                            cm_kr = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'kr'));
+                            app.krMenu(i) = uimenu(cm_kr, 'Text', '');
+                            app.krValue(i).ContextMenu = cm_kr;
+                            app.cms_kr{i} = cm_kr;
+        
+                            cm_sf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'sf'));
+                            app.sfMenu(i) = uimenu(cm_sf, 'Text', '');                    
+                            app.sfValue(i).ContextMenu = cm_sf;
+                            app.cms_sf{i} = cm_sf;
+        
+                            cm_vf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'vf'));
+                            app.vfMenu(i) = uimenu(cm_vf, 'Text', '');                    
+                            app.vfValue(i).ContextMenu = cm_vf; 
+                            app.cms_vf{i} = cm_vf;
 
-                        delete(app.cms_a{i});
-                        delete(app.cms_alpha{i});
-                        delete(app.cms_d{i});
-                        delete(app.cms_theta{i});
-                        delete(app.cms_rp{i});
-                        delete(app.cms_mJoint{i});
-                        delete(app.cms_IJoint{i});
-                        delete(app.cms_kr{i});
-                        delete(app.cms_sf{i});
-                        delete(app.cms_vf{i});
-
-                    else
-                        fprintf('add\n')
-                        app.jointNumber(i) = uilabel(app.UIFigure, 'Text', num2str(i));
-                        app.aValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.alphaValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.dValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
-                        app.thetaValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
-                        app.rpValue(i) = uidropdown(app.UIFigure, 'Items', {'Revolut', 'Prismatic'}, 'Value', 'Revolut');
-                        %app.rpValues{i} = 'Revolut';
-                        app.mJointValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.IJointValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.krValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.sfValue(i) = uieditfield(app.UIFigure, 'numeric');
-                        app.vfValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            cm_mLink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'mLink'));
+                            app.mLinkMenu(i) = uimenu(cm_mLink, 'Text', '');
+                            app.mLinkValue(i).ContextMenu = cm_mLink;
+                            app.cms_mLink{i} = cm_mLink;
     
-                        app.aValue(i).ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
-                        app.alphaValue(i).ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
-                        app.dValue(i).ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
-                        app.thetaValue(i).ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
-                        app.rpValue(i).ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
-                        app.mJointValue(i).ValueChangedFcn = createCallbackFcn(app, @mJointValueValueChanged, true);
-                        app.IJointValue(i).ValueChangedFcn = createCallbackFcn(app, @IJointValueValueChanged, true);
-                        app.krValue(i).ValueChangedFcn = createCallbackFcn(app, @krValueValueChanged, true);
-                        app.sfValue(i).ValueChangedFcn = createCallbackFcn(app, @sfValueValueChanged, true);
-                        app.vfValue(i).ValueChangedFcn = createCallbackFcn(app, @vfValueValueChanged, true);
-    
-                        if i == 10
-                            app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) - 3), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
-                        else
-                            app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) + 1), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
+                            cm_ILink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'ILink'));
+                            app.ILinkMenu(i) = uimenu(cm_ILink, 'Text', '');
+                            app.ILinkValue(i).ContextMenu = cm_ILink;
+                            app.cms_ILink{i} = cm_ILink;
+        
+                            if i <= length(app.aValues)
+                                app.aValue(i).Value = app.aValues(i);
+                            else
+                                app.aValue(i).Value = 0;
+                                app.aValues(i) = 0;
+                            end
+                            if i <= length(app.alphaValues)
+                                app.alphaValue(i).Value = app.alphaValues(i);
+                            else
+                                app.alphaValue(i).Value = 0;
+                                app.alphaValues(i) = 0;
+                            end
+                            if i <= length(app.dValues)
+                                app.dValue(i).Value = app.dValues(i);
+                            else
+                                app.dValue(i).Value = 0;
+                                app.dValues(i) = 0;
+                            end
+                            if i <= length(app.thetaValues)
+                                app.thetaValue(i).Value = app.thetaValues(i);
+                            else
+                                app.thetaValue(i).Value = 0;
+                                app.thetaValues(i) = 0;
+                            end
+                            if i <= length(app.rpValues) && ~isempty(app.rpValues{i})
+                                fprintf('rpValues{%d} = "%s"\n', i, app.rpValues{i});
+                                app.rpValue(i).Value = app.rpValues{i};
+                            else
+                                app.rpValue(i).Value = 'Revolut';
+                                app.rpValues{i} = 'Revolut';
+                            end
+                            if i <= length(app.mJointValues)
+                                app.mJointValue(i).Value = app.mJointValues(i);
+                            else
+                                app.mJointValue(i).Value = 0;
+                                app.mJointValues(i) = 0;
+                            end
+                            if i <= length(app.IJointValues)
+                                app.IJointValue(i).Value = app.IJointValues(i);
+                            else
+                                app.IJointValue(i).Value = 0;
+                                app.IJointValues(i) = 0;
+                            end
+                            if i <= length(app.krValues)
+                                app.krValue(i).Value = app.krValues(i);
+                            else
+                                app.krValue(i).Value = 0;
+                                app.krValues(i) = 0;
+                            end
+                            if i <= length(app.sfValues)
+                                app.sfValue(i).Value = app.sfValues(i);
+                            else
+                                app.sfValue(i).Value = 0;
+                                app.sfValues(i) = 0;
+                            end
+                            if i <= length(app.vfValues)
+                                app.vfValue(i).Value = app.vfValues(i);
+                            else
+                                app.vfValue(i).Value = 0;
+                                app.vfValues(i) = 0;
+                            end  
+                            if i <= length(app.mLinkValues)
+                                app.mLinkValue(i).Value = app.mLinkValues(i);
+                            else
+                                app.mLinkValue(i).Value = 0;
+                                app.mLinkValues(i) = 0;
+                            end
+                            if i <= length(app.ILinkValues)
+                                app.ILinkValue(i).Value = app.ILinkValues(i);
+                            else
+                                app.ILinkValue(i).Value = 0;
+                                app.ILinkValues(i) = 0;
+                            end
                         end
-                        app.aValue(i).Position = [((app.aValue(1).Position(1)) + 1), ((app.aValue(1).Position(2)) + 1) - 20*(i-1), app.aValue(1).Position(3), app.aValue(1).Position(4)];
-                        app.alphaValue(i).Position = [((app.alphaValue(1).Position(1)) + 1), ((app.alphaValue(1).Position(2)) + 1) - 20*(i-1), app.alphaValue(1).Position(3), app.alphaValue(1).Position(4)];
-                        app.dValue(i).Position = [((app.dValue(1).Position(1)) + 1), ((app.dValue(1).Position(2)) + 1) - 20*(i-1), app.dValue(1).Position(3), app.dValue(1).Position(4)];
-                        app.thetaValue(i).Position = [((app.thetaValue(1).Position(1)) + 1), ((app.thetaValue(1).Position(2)) + 1) - 20*(i-1), app.thetaValue(1).Position(3), app.thetaValue(1).Position(4)]; 
-                        app.rpValue(i).Position = [((app.rpValue(1).Position(1))), ((app.rpValue(1).Position(2))) - 20*(i-1), app.rpValue(1).Position(3), app.rpValue(1).Position(4)];
-                        app.mJointValue(i).Position = [((app.mJointValue(1).Position(1))), ((app.mJointValue(1).Position(2))) - 20*(i-1), app.mJointValue(1).Position(3), app.mJointValue(1).Position(4)];
-                        app.IJointValue(i).Position = [((app.IJointValue(1).Position(1))), ((app.IJointValue(1).Position(2))) - 20*(i-1), app.IJointValue(1).Position(3), app.IJointValue(1).Position(4)];
-                        app.krValue(i).Position = [((app.krValue(1).Position(1))), ((app.krValue(1).Position(2))) - 20*(i-1), app.krValue(1).Position(3), app.krValue(1).Position(4)];
-                        app.sfValue(i).Position = [((app.sfValue(1).Position(1))), ((app.sfValue(1).Position(2))) - 20*(i-1), app.sfValue(1).Position(3), app.sfValue(1).Position(4)];
-                        app.vfValue(i).Position = [((app.vfValue(1).Position(1))), ((app.vfValue(1).Position(2))) - 20*(i-1), app.vfValue(1).Position(3), app.vfValue(1).Position(4)];                    
-                    
-                        cm_a = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'a'));
-                        app.aMenu(i) = uimenu(cm_a, 'Text', '');
-                        app.aValue(i).ContextMenu = cm_a;
-                        app.cms_a{i} = cm_a;
-    
-                        cm_alpha = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'alpha'));
-                        app.alphaMenu(i) = uimenu(cm_alpha, 'Text', '');
-                        app.alphaValue(i).ContextMenu = cm_alpha;
-                        app.cms_alpha{i} = cm_alpha;
-    
-                        cm_d = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'd'));
-                        app.dMenu(i) = uimenu(cm_d, 'Text', '');
-                        app.dValue(i).ContextMenu = cm_d;
-                        app.cms_d{i} = cm_d;
-    
-                        cm_theta = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'theta'));
-                        app.thetaMenu(i) = uimenu(cm_theta, 'Text', '');
-                        app.thetaValue(i).ContextMenu = cm_theta;
-                        app.cms_theta{i} = cm_theta;
-    
-                        cm_rp = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'rp'));
-                        app.rpMenu(i) = uimenu(cm_rp, 'Text', '');
-                        app.rpValue(i).ContextMenu = cm_rp;
-                        app.cms_rp{i} = cm_rp;
-    
-                        cm_mJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'mJoint'));
-                        app.mJointMenu(i) = uimenu(cm_mJoint, 'Text', '');
-                        app.mJointValue(i).ContextMenu = cm_mJoint;
-                        app.cms_mJoint{i} = cm_mJoint;
-    
-                        cm_IJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'IJoint'));
-                        app.IJointMenu(i) = uimenu(cm_IJoint, 'Text', '');
-                        app.IJointValue(i).ContextMenu = cm_IJoint;
-                        app.cms_IJoint{i} = cm_IJoint;
-    
-                        cm_kr = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'kr'));
-                        app.krMenu(i) = uimenu(cm_kr, 'Text', '');
-                        app.krValue(i).ContextMenu = cm_kr;
-                        app.cms_kr{i} = cm_kr;
-    
-                        cm_sf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'sf'));
-                        app.sfMenu(i) = uimenu(cm_sf, 'Text', '');                    
-                        app.sfValue(i).ContextMenu = cm_sf;
-                        app.cms_sf{i} = cm_sf;
-    
-                        cm_vf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'vf'));
-                        app.vfMenu(i) = uimenu(cm_vf, 'Text', '');                    
-                        app.vfValue(i).ContextMenu = cm_vf; 
-                        app.cms_vf{i} = cm_vf;
-    
-                        if i <= length(app.aValues)
-                            app.aValue(i).Value = app.aValues(i);
-                        else
-                            app.aValue(i).Value = 0;
-                        end
-                        if i <= length(app.alphaValues)
-                            app.alphaValue(i).Value = app.alphaValues(i);
-                        else
-                            app.alphaValue(i).Value = 0;
-                        end
-                        if i <= length(app.dValues)
-                            app.dValue(i).Value = app.dValues(i);
-                        else
-                            app.dValue(i).Value = 0;
-                        end
-                        if i <= length(app.thetaValues)
-                            app.thetaValue(i).Value = app.thetaValues(i);
-                        else
-                            app.thetaValue(i).Value = 0;
-                        end
-                        if i <= length(app.rpValues) && ~isempty(app.rpValues{i})
-                            fprintf('rpValues{%d} = "%s"\n', i, app.rpValues{i});
-                            app.rpValue(i).Value = app.rpValues{i};
-                        else
-                            app.rpValue(i).Value = 'Revolut';
-                            app.rpValues{i} = 'Revolut';
-                        end
-                        if i <= length(app.mJointValues)
-                            app.mJointValue(i).Value = app.mJointValues(i);
-                        else
-                            app.mJointValue(i).Value = 0;
-                        end
-                        if i <= length(app.IJointValues)
-                            app.IJointValue(i).Value = app.IJointValues(i);
-                        else
-                            app.IJointValue(i).Value = 0;
-                        end
-                        if i <= length(app.krValues)
-                            app.krValue(i).Value = app.krValues(i);
-                        else
-                            app.krValue(i).Value = 0;
-                        end
-                        if i <= length(app.sfValues)
-                            app.sfValue(i).Value = app.sfValues(i);
-                        else
-                            app.sfValue(i).Value = 0;
-                        end
-                        if i <= length(app.vfValues)
-                            app.vfValue(i).Value = app.vfValues(i);
-                        else
-                            app.vfValue(i).Value = 0;
-                        end  
                     end
-                end
+                %else
+                    fprintf('same\n')
+                %end
                 app.jointCountPrevious = app.jointCount;
+                %app.menuPrevious = 2;
             end
             if app.MainMenus.SelectedObject == app.IFCIButton
-                
+
+                a = [app.jointCount; app.jointCountPrevious];
+
+                fprintf('%d joints to %d\n', app.jointCountPrevious, app.jointCount)
+
+                %if app.menuPrevious == 1
+                    for i = (min(a)+1):max(a)
+                        fprintf('%d\n', i)
+                        if app.jointCountPrevious > app.jointCount
+                            fprintf('del\n')
+                            delete(app.jointNumber(i));
+                            delete(app.aValue(i));
+                            delete(app.alphaValue(i));
+                            delete(app.dValue(i));
+                            delete(app.thetaValue(i));
+                            delete(app.rpValue(i));
+    
+                            delete(app.mJointValue(i));
+                            delete(app.IJointValue(i));
+                            delete(app.krValue(i));
+                            delete(app.sfValue(i));
+                            delete(app.vfValue(i));
+                            delete(app.linkNumber(i));
+                            delete(app.mLinkValue(i));
+                            delete(app.ILinkValue(i));
+    
+                            delete(app.cms_a{i});
+                            delete(app.cms_alpha{i});
+                            delete(app.cms_d{i});
+                            delete(app.cms_theta{i});
+                            delete(app.cms_rp{i});
+                            delete(app.cms_mJoint{i});
+                            delete(app.cms_IJoint{i});
+                            delete(app.cms_kr{i});
+                            delete(app.cms_sf{i});
+                            delete(app.cms_vf{i});
+                            delete(app.cms_mLink{i});
+                            delete(app.cms_ILink{i});
+    
+                        else
+                            fprintf('add\n')
+                            app.jointNumber(i) = uilabel(app.UIFigure, 'Text', num2str(i));
+                            app.aValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.alphaValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.dValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
+                            app.thetaValue(i) = uieditfield(app.UIFigure, 'numeric', 'Editable', 'on');
+                            app.rpValue(i) = uidropdown(app.UIFigure, 'Items', {'Revolut', 'Prismatic'}, 'Value', 'Revolut');
+                            app.mJointValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.IJointValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.krValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.sfValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.vfValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.linkNumber(i) = uilabel(app.UIFigure, 'Text', num2str(i));
+                            app.mLinkValue(i) = uieditfield(app.UIFigure, 'numeric');
+                            app.ILinkValue(i) = uieditfield(app.UIFigure, 'numeric');
+        
+                            app.aValue(i).ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
+                            app.alphaValue(i).ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
+                            app.dValue(i).ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
+                            app.thetaValue(i).ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
+                            app.rpValue(i).ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
+                            app.mJointValue(i).ValueChangedFcn = createCallbackFcn(app, @mJointValueValueChanged, true);
+                            app.IJointValue(i).ValueChangedFcn = createCallbackFcn(app, @IJointValueValueChanged, true);
+                            app.krValue(i).ValueChangedFcn = createCallbackFcn(app, @krValueValueChanged, true);
+                            app.sfValue(i).ValueChangedFcn = createCallbackFcn(app, @sfValueValueChanged, true);
+                            app.vfValue(i).ValueChangedFcn = createCallbackFcn(app, @vfValueValueChanged, true);
+                            app.mLinkValue(i).ValueChangedFcn = createCallbackFcn(app, @mLinkValueValueChanged, true);
+                            app.ILinkValue(i).ValueChangedFcn = createCallbackFcn(app, @ILinkValueValueChanged, true);
+        
+                            if i == 10
+                                app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) - 3), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
+                                app.linkNumber(i).Position = [((app.linkNumber(1).Position(1)) - 3), ((app.linkNumber(1).Position(2)) + 1) - 20*(i-1), app.linkNumber(1).Position(3), app.linkNumber(1).Position(4)];
+                            else
+                                app.jointNumber(i).Position = [((app.jointNumber(1).Position(1)) + 1), ((app.jointNumber(1).Position(2)) + 1) - 20*(i-1), app.jointNumber(1).Position(3), app.jointNumber(1).Position(4)];
+                                app.linkNumber(i).Position = [((app.linkNumber(1).Position(1)) + 1), ((app.linkNumber(1).Position(2)) + 1) - 20*(i-1), app.linkNumber(1).Position(3), app.linkNumber(1).Position(4)];
+                            end
+                            app.aValue(i).Position = [((app.aValue(1).Position(1)) + 1), ((app.aValue(1).Position(2)) + 1) - 20*(i-1), app.aValue(1).Position(3), app.aValue(1).Position(4)];
+                            app.alphaValue(i).Position = [((app.alphaValue(1).Position(1)) + 1), ((app.alphaValue(1).Position(2)) + 1) - 20*(i-1), app.alphaValue(1).Position(3), app.alphaValue(1).Position(4)];
+                            app.dValue(i).Position = [((app.dValue(1).Position(1)) + 1), ((app.dValue(1).Position(2)) + 1) - 20*(i-1), app.dValue(1).Position(3), app.dValue(1).Position(4)];
+                            app.thetaValue(i).Position = [((app.thetaValue(1).Position(1)) + 1), ((app.thetaValue(1).Position(2)) + 1) - 20*(i-1), app.thetaValue(1).Position(3), app.thetaValue(1).Position(4)]; 
+                            app.rpValue(i).Position = [((app.rpValue(1).Position(1))), ((app.rpValue(1).Position(2))) - 20*(i-1), app.rpValue(1).Position(3), app.rpValue(1).Position(4)];
+                            app.mJointValue(i).Position = [((app.mJointValue(1).Position(1))), ((app.mJointValue(1).Position(2))) - 20*(i-1), app.mJointValue(1).Position(3), app.mJointValue(1).Position(4)];
+                            app.IJointValue(i).Position = [((app.IJointValue(1).Position(1))), ((app.IJointValue(1).Position(2))) - 20*(i-1), app.IJointValue(1).Position(3), app.IJointValue(1).Position(4)];
+                            app.krValue(i).Position = [((app.krValue(1).Position(1))), ((app.krValue(1).Position(2))) - 20*(i-1), app.krValue(1).Position(3), app.krValue(1).Position(4)];
+                            app.sfValue(i).Position = [((app.sfValue(1).Position(1))), ((app.sfValue(1).Position(2))) - 20*(i-1), app.sfValue(1).Position(3), app.sfValue(1).Position(4)];
+                            app.vfValue(i).Position = [((app.vfValue(1).Position(1))), ((app.vfValue(1).Position(2))) - 20*(i-1), app.vfValue(1).Position(3), app.vfValue(1).Position(4)];                    
+                            app.mLinkValue(i).Position = [((app.mLinkValue(1).Position(1)) + 1), ((app.mLinkValue(1).Position(2)) + 1) - 20*(i-1), app.mLinkValue(1).Position(3), app.mLinkValue(1).Position(4)];
+                            app.ILinkValue(i).Position = [((app.ILinkValue(1).Position(1)) + 1), ((app.ILinkValue(1).Position(2)) + 1) - 20*(i-1), app.ILinkValue(1).Position(3), app.ILinkValue(1).Position(4)];
+
+                            cm_a = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'a'));
+                            app.aMenu(i) = uimenu(cm_a, 'Text', '');
+                            app.aValue(i).ContextMenu = cm_a;
+                            app.cms_a{i} = cm_a;
+        
+                            cm_alpha = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'alpha'));
+                            app.alphaMenu(i) = uimenu(cm_alpha, 'Text', '');
+                            app.alphaValue(i).ContextMenu = cm_alpha;
+                            app.cms_alpha{i} = cm_alpha;
+        
+                            cm_d = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'd'));
+                            app.dMenu(i) = uimenu(cm_d, 'Text', '');
+                            app.dValue(i).ContextMenu = cm_d;
+                            app.cms_d{i} = cm_d;
+        
+                            cm_theta = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'theta'));
+                            app.thetaMenu(i) = uimenu(cm_theta, 'Text', '');
+                            app.thetaValue(i).ContextMenu = cm_theta;
+                            app.cms_theta{i} = cm_theta;
+        
+                            cm_rp = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'rp'));
+                            app.rpMenu(i) = uimenu(cm_rp, 'Text', '');
+                            app.rpValue(i).ContextMenu = cm_rp;
+                            app.cms_rp{i} = cm_rp;
+        
+                            cm_mJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'mJoint'));
+                            app.mJointMenu(i) = uimenu(cm_mJoint, 'Text', '');
+                            app.mJointValue(i).ContextMenu = cm_mJoint;
+                            app.cms_mJoint{i} = cm_mJoint;
+        
+                            cm_IJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'IJoint'));
+                            app.IJointMenu(i) = uimenu(cm_IJoint, 'Text', '');
+                            app.IJointValue(i).ContextMenu = cm_IJoint;
+                            app.cms_IJoint{i} = cm_IJoint;
+        
+                            cm_kr = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'kr'));
+                            app.krMenu(i) = uimenu(cm_kr, 'Text', '');
+                            app.krValue(i).ContextMenu = cm_kr;
+                            app.cms_kr{i} = cm_kr;
+        
+                            cm_sf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'sf'));
+                            app.sfMenu(i) = uimenu(cm_sf, 'Text', '');                    
+                            app.sfValue(i).ContextMenu = cm_sf;
+                            app.cms_sf{i} = cm_sf;
+        
+                            cm_vf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'vf'));
+                            app.vfMenu(i) = uimenu(cm_vf, 'Text', '');                    
+                            app.vfValue(i).ContextMenu = cm_vf; 
+                            app.cms_vf{i} = cm_vf;
+
+                            cm_mLink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'mLink'));
+                            app.mLinkMenu(i) = uimenu(cm_mLink, 'Text', '');
+                            app.mLinkValue(i).ContextMenu = cm_mLink;
+                            app.cms_mLink{i} = cm_mLink;
+    
+                            cm_ILink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, i, 'ILink'));
+                            app.ILinkMenu(i) = uimenu(cm_ILink, 'Text', '');
+                            app.ILinkValue(i).ContextMenu = cm_ILink;
+                            app.cms_ILink{i} = cm_ILink;
+        
+                            if i <= length(app.aValues)
+                                app.aValue(i).Value = app.aValues(i);
+                            else
+                                app.aValue(i).Value = 0;
+                                app.aValues(i) = 0;
+                            end
+                            if i <= length(app.alphaValues)
+                                app.alphaValue(i).Value = app.alphaValues(i);
+                            else
+                                app.alphaValue(i).Value = 0;
+                                app.alphaValues(i) = 0;
+                            end
+                            if i <= length(app.dValues)
+                                app.dValue(i).Value = app.dValues(i);
+                            else
+                                app.dValue(i).Value = 0;
+                                app.dValues(i) = 0;
+                            end
+                            if i <= length(app.thetaValues)
+                                app.thetaValue(i).Value = app.thetaValues(i);
+                            else
+                                app.thetaValue(i).Value = 0;
+                                app.thetaValues(i) = 0;
+                            end
+                            if i <= length(app.rpValues) && ~isempty(app.rpValues{i})
+                                fprintf('rpValues{%d} = "%s"\n', i, app.rpValues{i});
+                                app.rpValue(i).Value = app.rpValues{i};
+                            else
+                                app.rpValue(i).Value = 'Revolut';
+                                app.rpValues{i} = 'Revolut';
+                            end
+                            if i <= length(app.mJointValues)
+                                app.mJointValue(i).Value = app.mJointValues(i);
+                            else
+                                app.mJointValue(i).Value = 0;
+                                app.mJointValues(i) = 0;
+                            end
+                            if i <= length(app.IJointValues)
+                                app.IJointValue(i).Value = app.IJointValues(i);
+                            else
+                                app.IJointValue(i).Value = 0;
+                                app.IJointValues(i) = 0;
+                            end
+                            if i <= length(app.krValues)
+                                app.krValue(i).Value = app.krValues(i);
+                            else
+                                app.krValue(i).Value = 0;
+                                app.krValues(i) = 0;
+                            end
+                            if i <= length(app.sfValues)
+                                app.sfValue(i).Value = app.sfValues(i);
+                            else
+                                app.sfValue(i).Value = 0;
+                                app.sfValues(i) = 0;
+                            end
+                            if i <= length(app.vfValues)
+                                app.vfValue(i).Value = app.vfValues(i);
+                            else
+                                app.vfValue(i).Value = 0;
+                                app.vfValues(i) = 0;
+                            end
+                            if i <= length(app.mLinkValues)
+                                app.mLinkValue(i).Value = app.mLinkValues(i);
+                            else
+                                app.mLinkValue(i).Value = 0;
+                                app.mLinkValues(i) = 0;
+                            end
+                            if i <= length(app.ILinkValues)
+                                app.ILinkValue(i).Value = app.ILinkValues(i);
+                            else
+                                app.ILinkValue(i).Value = 0;
+                                app.ILinkValues(i) = 0;
+                            end
+                        end
+                    end
+                %else
+                    fprintf('same\n')
+                %end
+                app.jointCountPrevious = app.jointCount;
+                %app.menuPrevious = 3;
             end
         end
 
@@ -538,46 +828,70 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.rpMenu(1) = uimenu(cm_rp, 'Text', '');
             app.rpValue(1).ContextMenu = cm_rp;
             app.cms_rp{1} = cm_rp;
+            
+            if app.MainMenus.SelectedObject == app.DynamicsButton
+                cm_icDot = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'icDot'));
+                app.icDotMenu(1) = uimenu(cm_icDot, 'Text', '');
+                app.icDotValue(1).ContextMenu = cm_icDot;
+                app.cms_icDot{1} = cm_icDot;
+        
+                cm_icDoubleDot = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'icDoubleDot'));
+                app.icDoubleDotMenu(1) = uimenu(cm_icDoubleDot, 'Text', '');
+                app.icDoubleDotValue(1).ContextMenu = cm_icDoubleDot;
+                app.cms_icDoubleDot{1} = cm_icDoubleDot;
+        
+                cm_dEquation = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'dEquation'));
+                app.dEquationMenu(1) = uimenu(cm_dEquation, 'Text', '');
+                app.dEquation(1).ContextMenu = cm_dEquation;
+                app.cms_dEquation{1} = cm_dEquation;
+            end
+            if app.MainMenus.SelectedObject == app.IFCCButton || app.MainMenus.SelectedObject == app.IFCIButton
+                cm_mJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'mJoint'));
+                app.mJointMenu(1) = uimenu(cm_mJoint, 'Text', '');
+                app.mJointValue(1).ContextMenu = cm_mJoint;
+                app.cms_mJoint{1} = cm_mJoint;
+        
+                cm_IJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'IJoint'));
+                app.IJointMenu(1) = uimenu(cm_IJoint, 'Text', '');
+                app.IJointValue(1).ContextMenu = cm_IJoint;
+                app.cms_IJoint{1} = cm_IJoint;
+        
+                cm_kr = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'kr'));
+                app.krMenu(1) = uimenu(cm_kr, 'Text', '');
+                app.krValue(1).ContextMenu = cm_kr;
+                app.cms_kr{1} = cm_kr;
+        
+                cm_sf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'sf'));
+                app.sfMenu(1) = uimenu(cm_sf, 'Text', '');                    
+                app.sfValue(1).ContextMenu = cm_sf;
+                app.cms_sf{1} = cm_sf;
+        
+                cm_vf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'vf'));
+                app.vfMenu(1) = uimenu(cm_vf, 'Text', '');                    
+                app.vfValue(1).ContextMenu = cm_vf;
+                app.cms_vf{1} = cm_vf;
+
+                cm_mLink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'mLink'));
+                app.mLinkMenu(1) = uimenu(cm_mLink, 'Text', '');
+                app.mLinkValue(1).ContextMenu = cm_mLink;
+                app.cms_mLink{1} = cm_mLink;
     
-            cm_icDot = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'icDot'));
-            app.icDotMenu(1) = uimenu(cm_icDot, 'Text', '');
-            app.icDotValue(1).ContextMenu = cm_icDot;
-            app.cms_icDot{1} = cm_icDot;
-    
-            cm_icDoubleDot = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'icDoubleDot'));
-            app.icDoubleDotMenu(1) = uimenu(cm_icDoubleDot, 'Text', '');
-            app.icDoubleDotValue(1).ContextMenu = cm_icDoubleDot;
-            app.cms_icDoubleDot{1} = cm_icDoubleDot;
-    
-            cm_dEquation = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'dEquation'));
-            app.dEquationMenu(1) = uimenu(cm_dEquation, 'Text', '');
-            app.dEquation(1).ContextMenu = cm_dEquation;
-            app.cms_dEquation{1} = cm_dEquation;
-    
-            cm_mJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'mJoint'));
-            app.mJointMenu(1) = uimenu(cm_mJoint, 'Text', '');
-            app.mJointValue(1).ContextMenu = cm_mJoint;
-            app.cms_mJoint{1} = cm_mJoint;
-    
-            cm_IJoint = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'IJoint'));
-            app.IJointMenu(1) = uimenu(cm_IJoint, 'Text', '');
-            app.IJointValue(1).ContextMenu = cm_IJoint;
-            app.cms_IJoint{1} = cm_IJoint;
-    
-            cm_kr = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'kr'));
-            app.krMenu(1) = uimenu(cm_kr, 'Text', '');
-            app.krValue(1).ContextMenu = cm_kr;
-            app.cms_kr{1} = cm_kr;
-    
-            cm_sf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'sf'));
-            app.sfMenu(1) = uimenu(cm_sf, 'Text', '');                    
-            app.sfValue(1).ContextMenu = cm_sf;
-            app.cms_sf{1} = cm_sf;
-    
-            cm_vf = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'vf'));
-            app.vfMenu(1) = uimenu(cm_vf, 'Text', '');                    
-            app.vfValue(1).ContextMenu = cm_vf;
-            app.cms_vf{1} = cm_vf;
+                cm_ILink = uicontextmenu(app.UIFigure, 'ContextMenuOpeningFcn', @(src, event) updateContextMenu(app, 1, 'ILink'));
+                app.ILinkMenu(1) = uimenu(cm_ILink, 'Text', '');
+                app.ILinkValue(1).ContextMenu = cm_ILink;
+                app.cms_ILink{1} = cm_ILink;
+            end
+        end
+
+        function cmDeleteIndex1(app)
+            types = {'cms_a', 'cms_alpha', 'cms_d', 'cms_theta', 'cms_rp', 'cms_icDot', 'cms_icDoubleDot', 'cms_dEquation', 'cms_mJoint', 'cms_IJoint', 'cms_kr', 'cms_sf', 'cms_vf', 'cms_mLink', 'cms_ILink'};
+            for t = 1:length(types)
+                field = types{t};
+                if ~isempty(app.(field)) && length(app.(field)) >= 1 && ~isempty(app.(field){1}) && isvalid(app.(field){1})
+                    delete(app.(field){1});
+                    app.(field){1} = [];
+                end
+            end
         end
     end
 
@@ -631,19 +945,6 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         function thetaValueValueChanged(app, event)
             app.thetaValues(find(app.thetaValue == event.Source)) = event.Value;
             fprintf('Box number %d was changed to %f\n', find(app.thetaValue == event.Source), event.Value);
-
-            %{
-            thetaValueTemp = event.Value;
-            changedBox = event.Source;
-            index = find(app.thetaValue == changedBox);
-            if strcmp(app.rpValues{index}, 'Revolut') && ~isempty(app.rpValues{index})
-                app.thetaValues(index) = thetaValueTemp;
-            else
-                return
-            end
-            app.thetaValues(index) = thetaValueTemp;
-            fprintf('Box number %d was changed to %f\n', index, thetaValueTemp); 
-            %}
         end
 
         % Value changed function: rpValue
@@ -678,15 +979,20 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
 
         % Selection changed function: MainMenus
         function MainMenusSelectionChanged(app, event)
-            app.jointCountPrevious = 1;
-            a = [app.jointCount; app.jointCountPrevious];
-
             if app.MainMenus.SelectedObject == app.DynamicsButton
+                app.jointCountPrevious = 1;
+                app.menuCurrent = 1;
+
+                a = [app.jointCount; app.jointCountPrevious];
+                
                 app.mJointValue(1).Visible = 'off';
                 app.IJointValue(1).Visible = 'off';
                 app.krValue(1).Visible = 'off';
                 app.sfValue(1).Visible = 'off';
                 app.vfValue(1).Visible = 'off';
+                app.linkNumber(1).Visible = 'off';
+                app.mLinkValue(1).Visible = 'off';
+                app.ILinkValue(1).Visible = 'off';
 
                 if ~isempty(app.cms_mJoint) && ~isempty(app.cms_mJoint{1}) && isvalid(app.cms_mJoint{1})
                     delete(app.cms_mJoint{1}); app.cms_mJoint{1} = [];
@@ -703,12 +1009,21 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 if ~isempty(app.cms_vf) && ~isempty(app.cms_vf{1}) && isvalid(app.cms_vf{1})
                     delete(app.cms_vf{1}); app.cms_vf{1} = [];
                 end
+                if ~isempty(app.cms_mLink) && ~isempty(app.cms_mLink{1}) && isvalid(app.cms_mLink{1})
+                    delete(app.cms_mLink{1}); app.cms_mLink{1} = [];
+                end
+                if ~isempty(app.cms_ILink) && ~isempty(app.cms_ILink{1}) && isvalid(app.cms_ILink{1})
+                    delete(app.cms_ILink{1}); app.cms_ILink{1} = [];
+                end
 
                 app.mJointLabel.Visible = 'off';
                 app.IJointLabel.Visible = 'off';
                 app.krLabel.Visible = 'off';
                 app.sfLabel.Visible = 'off';
                 app.vfLabel.Visible = 'off';
+                app.mLinkLabel.Visible = 'off';
+                app.ILinkLabel.Visible = 'off';
+                app.LinksTableLabel.Visible = 'off';
 
                 app.icDotValue(1).Visible = 'on';
                 app.icDoubleDotValue(1).Visible = 'on';
@@ -718,7 +1033,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                 app.dEquationLabel.Visible = 'on';
 
                 for i = (min(a)+1):max(a)
-                    %fprintf('i = %d\n',i);
+                    fprintf('i = %d\n',i);
                     %fprintf('Joint Count = %d\n',app.jointCount);
                     %fprintf('Previous Joint Count = %d\n',app.jointCountPrevious);
 
@@ -733,6 +1048,9 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     delete(app.krValue(i));
                     delete(app.sfValue(i));
                     delete(app.vfValue(i));
+                    delete(app.linkNumber(i));
+                    delete(app.mLinkValue(i));
+                    delete(app.ILinkValue(i));
 
                     delete(app.cms_a{i});
                     delete(app.cms_alpha{i});
@@ -744,66 +1062,167 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
                     delete(app.cms_kr{i});
                     delete(app.cms_sf{i});
                     delete(app.cms_vf{i});
+                    delete(app.cms_mLink{i});
+                    delete(app.cms_ILink{i});
                 end
+                %fprintf('pre %d now %d\n', app.menuPrevious, app.menuCurrent)
+                cmDeleteIndex1(app);
+                cmInitialize(app);
+    
+                updateMainMenu(app);
+                app.menuPrevious = 1;
             end
             if app.MainMenus.SelectedObject == app.IFCCButton
-                app.icDotValue(1).Visible = 'off';
-                app.icDoubleDotValue(1).Visible = 'off';
-                app.dEquation(1).Visible = 'off';
+                if app.menuPrevious == 1
+                    app.jointCountPrevious = 1;
+                    app.menuCurrent = 2;
 
-                if ~isempty(app.cms_icDot) && ~isempty(app.cms_icDot{1}) && isvalid(app.cms_icDot{1})
-                    delete(app.cms_icDot{1}); app.cms_icDot{1} = [];
+                    a = [app.jointCount; app.jointCountPrevious];
+
+                    app.icDotValue(1).Visible = 'off';
+                    app.icDoubleDotValue(1).Visible = 'off';
+                    app.dEquation(1).Visible = 'off';
+    
+                    if ~isempty(app.cms_icDot) && ~isempty(app.cms_icDot{1}) && isvalid(app.cms_icDot{1})
+                        delete(app.cms_icDot{1}); app.cms_icDot{1} = [];
+                    end
+                    if ~isempty(app.cms_icDoubleDot) && ~isempty(app.cms_icDoubleDot{1}) && isvalid(app.cms_icDoubleDot{1})
+                        delete(app.cms_icDoubleDot{1}); app.cms_icDoubleDot{1} = [];
+                    end
+                    if ~isempty(app.cms_dEquation) && ~isempty(app.cms_dEquation{1}) && isvalid(app.cms_dEquation{1})
+                        delete(app.cms_dEquation{1}); app.cms_dEquation{1} = [];
+                    end
+    
+                    app.icDotLabel.Visible = 'off';
+                    app.icDoubleDotLabel.Visible = 'off';
+                    app.dEquationLabel.Visible = 'off';
+    
+                    app.mJointValue(1).Visible = 'on';
+                    app.IJointValue(1).Visible = 'on';
+                    app.krValue(1).Visible = 'on';
+                    app.sfValue(1).Visible = 'on';
+                    app.vfValue(1).Visible = 'on';
+                    app.mLinkValue(1).Visible = 'on';
+                    app.ILinkValue(1).Visible = 'on';
+                    app.mJointLabel.Visible = 'on';
+                    app.IJointLabel.Visible = 'on';
+                    app.krLabel.Visible = 'on';
+                    app.sfLabel.Visible = 'on';
+                    app.vfLabel.Visible = 'on';
+                    app.LinksTableLabel.Visible = 'on';
+                    app.linkNumber(1).Visible = 'on';
+                    app.mLinkLabel.Visible = 'on';
+                    app.ILinkLabel.Visible = 'on';
+    
+                    for i = (min(a)+1):max(a)
+                        delete(app.jointNumber(i));
+                        delete(app.aValue(i));
+                        delete(app.alphaValue(i));
+                        delete(app.dValue(i));
+                        delete(app.thetaValue(i));
+                        delete(app.rpValue(i));
+                        delete(app.icDotValue(i));
+                        delete(app.icDoubleDotValue(i));
+                        delete(app.dEquation(i));
+    
+                        delete(app.cms_a{i});
+                        delete(app.cms_alpha{i});
+                        delete(app.cms_d{i});
+                        delete(app.cms_theta{i});
+                        delete(app.cms_rp{i});
+                        delete(app.cms_icDot{i});
+                        delete(app.cms_icDoubleDot{i});
+                        delete(app.cms_dEquation{i});
+                    end
+                else
+                    fprintf('same in menu\n')
                 end
-                if ~isempty(app.cms_icDoubleDot) && ~isempty(app.cms_icDoubleDot{1}) && isvalid(app.cms_icDoubleDot{1})
-                    delete(app.cms_icDoubleDot{1}); app.cms_icDoubleDot{1} = [];
-                end
-                if ~isempty(app.cms_dEquation) && ~isempty(app.cms_dEquation{1}) && isvalid(app.cms_dEquation{1})
-                    delete(app.cms_dEquation{1}); app.cms_dEquation{1} = [];
-                end
-
-                app.icDotLabel.Visible = 'off';
-                app.icDoubleDotLabel.Visible = 'off';
-                app.dEquationLabel.Visible = 'off';
-
-                app.mJointValue(1).Visible = 'on';
-                app.IJointValue(1).Visible = 'on';
-                app.krValue(1).Visible = 'on';
-                app.sfValue(1).Visible = 'on';
-                app.vfValue(1).Visible = 'on';
-                app.mJointLabel.Visible = 'on';
-                app.IJointLabel.Visible = 'on';
-                app.krLabel.Visible = 'on';
-                app.sfLabel.Visible = 'on';
-                app.vfLabel.Visible = 'on';
-
-                for i = (min(a)+1):max(a)
-                    delete(app.jointNumber(i));
-                    delete(app.aValue(i));
-                    delete(app.alphaValue(i));
-                    delete(app.dValue(i));
-                    delete(app.thetaValue(i));
-                    delete(app.rpValue(i));
-                    delete(app.icDotValue(i));
-                    delete(app.icDoubleDotValue(i));
-                    delete(app.dEquation(i));
-
-                    delete(app.cms_a{i});
-                    delete(app.cms_alpha{i});
-                    delete(app.cms_d{i});
-                    delete(app.cms_theta{i});
-                    delete(app.cms_rp{i});
-                    delete(app.cms_icDot{i});
-                    delete(app.cms_icDoubleDot{i});
-                    delete(app.cms_dEquation{i});
-                end
+                cmDeleteIndex1(app);
+                cmInitialize(app);
+    
+                updateMainMenu(app);
+                app.menuPrevious = 2;
             end
             if app.MainMenus.SelectedObject == app.IFCIButton
-            
-            end
+                if app.menuPrevious == 1
+                    app.jointCountPrevious = 1;
+                    app.menuCurrent = 3;
 
+                    a = [app.jointCount; app.jointCountPrevious];
+
+                    app.icDotValue(1).Visible = 'off';
+                    app.icDoubleDotValue(1).Visible = 'off';
+                    app.dEquation(1).Visible = 'off';
+    
+                    if ~isempty(app.cms_icDot) && ~isempty(app.cms_icDot{1}) && isvalid(app.cms_icDot{1})
+                        delete(app.cms_icDot{1}); app.cms_icDot{1} = [];
+                    end
+                    if ~isempty(app.cms_icDoubleDot) && ~isempty(app.cms_icDoubleDot{1}) && isvalid(app.cms_icDoubleDot{1})
+                        delete(app.cms_icDoubleDot{1}); app.cms_icDoubleDot{1} = [];
+                    end
+                    if ~isempty(app.cms_dEquation) && ~isempty(app.cms_dEquation{1}) && isvalid(app.cms_dEquation{1})
+                        delete(app.cms_dEquation{1}); app.cms_dEquation{1} = [];
+                    end
+    
+                    app.icDotLabel.Visible = 'off';
+                    app.icDoubleDotLabel.Visible = 'off';
+                    app.dEquationLabel.Visible = 'off';
+    
+                    app.mJointValue(1).Visible = 'on';
+                    app.IJointValue(1).Visible = 'on';
+                    app.krValue(1).Visible = 'on';
+                    app.sfValue(1).Visible = 'on';
+                    app.vfValue(1).Visible = 'on';
+                    app.mLinkValue(1).Visible = 'on';
+                    app.ILinkValue(1).Visible = 'on';
+                    app.mJointLabel.Visible = 'on';
+                    app.IJointLabel.Visible = 'on';
+                    app.krLabel.Visible = 'on';
+                    app.sfLabel.Visible = 'on';
+                    app.vfLabel.Visible = 'on';
+                    app.LinksTableLabel.Visible = 'on';
+                    app.linkNumber(1).Visible = 'on';
+                    app.mLinkLabel.Visible = 'on';
+                    app.ILinkLabel.Visible = 'on';
+    
+                    for i = (min(a)+1):max(a)
+                        delete(app.jointNumber(i));
+                        delete(app.aValue(i));
+                        delete(app.alphaValue(i));
+                        delete(app.dValue(i));
+                        delete(app.thetaValue(i));
+                        delete(app.rpValue(i));
+                        delete(app.icDotValue(i));
+                        delete(app.icDoubleDotValue(i));
+                        delete(app.dEquation(i));
+    
+                        delete(app.cms_a{i});
+                        delete(app.cms_alpha{i});
+                        delete(app.cms_d{i});
+                        delete(app.cms_theta{i});
+                        delete(app.cms_rp{i});
+                        delete(app.cms_icDot{i});
+                        delete(app.cms_icDoubleDot{i});
+                        delete(app.cms_dEquation{i});
+                    end
+                else
+                    fprintf('same in menu\n')
+                end
+                cmDeleteIndex1(app);
+                cmInitialize(app);
+    
+                updateMainMenu(app);
+                app.menuPrevious = 3;
+            end
+            %{
+            fprintf('pre %d now %d\n', app.menuPrevious, app.menuCurrent)
+
+            cmDeleteIndex1(app);
             cmInitialize(app);
-            
+
             updateMainMenu(app);
+
+            %}
         end
 
         % Value changed function: icDotValue
@@ -828,6 +1247,18 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
         function IJointValueValueChanged(app, event)
             app.IJointValues(find(app.IJointValue == event.Source)) = event.Value;
             fprintf('Box number %d was changed to %f\n', find(app.IJointValue == event.Source), event.Value);
+        end
+
+        % Value changed function: mLinkValue
+        function mLinkValueValueChanged(app, event)
+            app.mLinkValues(find(app.mLinkValue == event.Source)) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.mLinkValue == event.Source), event.Value);
+        end
+
+        % Value changed function: ILinkValue
+        function ILinkValueValueChanged(app, event)
+            app.ILinkValues(find(app.ILinkValue == event.Source)) = event.Value;
+            fprintf('Box number %d was changed to %f\n', find(app.ILinkValue == event.Source), event.Value);       
         end
 
         % Changes arrangement of the app based on UIFigure width
@@ -891,41 +1322,41 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             % Create aValue
             app.aValue = uieditfield(app.LeftPanel, 'numeric');
             app.aValue.ValueChangedFcn = createCallbackFcn(app, @aValueValueChanged, true);
-            app.aValue.Position = [19 654 20 20];
+            app.aValue.Position = [19 634 20 20];
 
             % Create alphaValue
             app.alphaValue = uieditfield(app.LeftPanel, 'numeric');
             app.alphaValue.ValueChangedFcn = createCallbackFcn(app, @alphaValueValueChanged, true);
-            app.alphaValue.Position = [39 654 20 20];
+            app.alphaValue.Position = [39 634 20 20];
 
             % Create dValue
             app.dValue = uieditfield(app.LeftPanel, 'numeric');
             app.dValue.ValueChangedFcn = createCallbackFcn(app, @dValueValueChanged, true);
-            app.dValue.Position = [59 654 20 20];
+            app.dValue.Position = [59 634 20 20];
 
             % Create thetaValue
             app.thetaValue = uieditfield(app.LeftPanel, 'numeric');
             app.thetaValue.ValueChangedFcn = createCallbackFcn(app, @thetaValueValueChanged, true);
-            app.thetaValue.Position = [79 654 20 20];
+            app.thetaValue.Position = [79 634 20 20];
 
             % Create aLabel
             app.aLabel = uilabel(app.LeftPanel);
-            app.aLabel.Position = [27 673 11 22];
+            app.aLabel.Position = [27 653 11 22];
             app.aLabel.Text = 'a';
 
             % Create Label
             app.Label = uilabel(app.LeftPanel);
-            app.Label.Position = [47 673 11 22];
+            app.Label.Position = [47 653 11 22];
             app.Label.Text = 'α';
 
             % Create dLabel
             app.dLabel = uilabel(app.LeftPanel);
-            app.dLabel.Position = [67 673 10 22];
+            app.dLabel.Position = [67 653 10 22];
             app.dLabel.Text = 'd';
 
             % Create thetaLabel
             app.thetaLabel = uilabel(app.LeftPanel);
-            app.thetaLabel.Position = [87 673 10 22];
+            app.thetaLabel.Position = [87 653 10 22];
             app.thetaLabel.Text = 'θ';
 
             % Create MAE547Team1FinalProjectLabel
@@ -938,7 +1369,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.MainMenus.SelectionChangedFcn = createCallbackFcn(app, @MainMenusSelectionChanged, true);
             app.MainMenus.TitlePosition = 'centertop';
             app.MainMenus.Title = 'Modes';
-            app.MainMenus.Position = [20 396 208 59];
+            app.MainMenus.Position = [20 376 208 59];
 
             % Create DynamicsButton
             app.DynamicsButton = uitogglebutton(app.MainMenus);
@@ -956,6 +1387,48 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.IFCIButton.Text = 'IFC I';
             app.IFCIButton.Position = [136 5 61 23];
 
+            % Create JointsTableLabel
+            app.JointsTableLabel = uilabel(app.LeftPanel);
+            app.JointsTableLabel.Position = [6 672 68 22];
+            app.JointsTableLabel.Text = 'Joints Table';
+
+            % Create mLinkValue
+            app.mLinkValue = uieditfield(app.LeftPanel, 'numeric');
+            app.mLinkValue.ValueChangedFcn = createCallbackFcn(app, @mLinkValueValueChanged, true);
+            app.mLinkValue.Visible = 'off';
+            app.mLinkValue.Position = [19 304 20 20];
+
+            % Create ILinkValue
+            app.ILinkValue = uieditfield(app.LeftPanel, 'numeric');
+            app.ILinkValue.ValueChangedFcn = createCallbackFcn(app, @ILinkValueValueChanged, true);
+            app.ILinkValue.Visible = 'off';
+            app.ILinkValue.Position = [39 304 20 20];
+
+            % Create mLinkLabel
+            app.mLinkLabel = uilabel(app.LeftPanel);
+            app.mLinkLabel.Visible = 'off';
+            app.mLinkLabel.Position = [26 323 12 22];
+            app.mLinkLabel.Text = 'm';
+
+            % Create ILinkLabel
+            app.ILinkLabel = uilabel(app.LeftPanel);
+            app.ILinkLabel.FontName = 'Times New Roman';
+            app.ILinkLabel.Visible = 'off';
+            app.ILinkLabel.Position = [47 323 12 22];
+            app.ILinkLabel.Text = 'I';
+
+            % Create LinksTableLabel
+            app.LinksTableLabel = uilabel(app.LeftPanel);
+            app.LinksTableLabel.Visible = 'off';
+            app.LinksTableLabel.Position = [7 343 65 22];
+            app.LinksTableLabel.Text = 'Links Table';
+
+            % Create linkNumber
+            app.linkNumber = uilabel(app.LeftPanel);
+            app.linkNumber.Visible = 'off';
+            app.linkNumber.Position = [7 303 20 22];
+            app.linkNumber.Text = '1';
+
             % Create RightPanel
             app.RightPanel = uipanel(app.GridLayout);
             app.RightPanel.Layout.Row = 1;
@@ -965,113 +1438,113 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             app.rpValue = uidropdown(app.UIFigure);
             app.rpValue.Items = {'Revolut', 'Prismatic'};
             app.rpValue.ValueChangedFcn = createCallbackFcn(app, @rpValueValueChanged, true);
-            app.rpValue.Position = [120 655 42 20];
+            app.rpValue.Position = [120 635 42 20];
             app.rpValue.Value = 'Revolut';
 
             % Create mJointValue
             app.mJointValue = uieditfield(app.UIFigure, 'numeric');
             app.mJointValue.ValueChangedFcn = createCallbackFcn(app, @mJointValueValueChanged, true);
             app.mJointValue.Visible = 'off';
-            app.mJointValue.Position = [162 655 20 20];
+            app.mJointValue.Position = [162 635 20 20];
 
             % Create mJointLabel
             app.mJointLabel = uilabel(app.UIFigure);
             app.mJointLabel.Visible = 'off';
-            app.mJointLabel.Position = [169 674 12 22];
+            app.mJointLabel.Position = [169 654 12 22];
             app.mJointLabel.Text = 'm';
 
             % Create krValue
             app.krValue = uieditfield(app.UIFigure, 'numeric');
             app.krValue.ValueChangedFcn = createCallbackFcn(app, @krValueValueChanged, true);
             app.krValue.Visible = 'off';
-            app.krValue.Position = [202 655 20 20];
+            app.krValue.Position = [202 635 20 20];
 
             % Create sfValue
             app.sfValue = uieditfield(app.UIFigure, 'numeric');
             app.sfValue.ValueChangedFcn = createCallbackFcn(app, @sfValueValueChanged, true);
             app.sfValue.Visible = 'off';
-            app.sfValue.Position = [222 655 20 20];
+            app.sfValue.Position = [222 635 20 20];
 
             % Create vfValue
             app.vfValue = uieditfield(app.UIFigure, 'numeric');
             app.vfValue.ValueChangedFcn = createCallbackFcn(app, @vfValueValueChanged, true);
             app.vfValue.Visible = 'off';
-            app.vfValue.Position = [242 655 20 20];
+            app.vfValue.Position = [242 635 20 20];
 
             % Create krLabel
             app.krLabel = uilabel(app.UIFigure);
             app.krLabel.FontSize = 14;
             app.krLabel.Visible = 'off';
-            app.krLabel.Position = [209 674 12 22];
+            app.krLabel.Position = [209 654 12 22];
             app.krLabel.Text = 'kᵣ';
 
             % Create sfLabel
             app.sfLabel = uilabel(app.UIFigure);
             app.sfLabel.Visible = 'off';
-            app.sfLabel.Position = [226 674 18 22];
+            app.sfLabel.Position = [226 654 18 22];
             app.sfLabel.Text = 'SF';
 
             % Create vfLabel
             app.vfLabel = uilabel(app.UIFigure);
             app.vfLabel.Visible = 'off';
-            app.vfLabel.Position = [246 674 18 22];
+            app.vfLabel.Position = [246 654 18 22];
             app.vfLabel.Text = 'VF';
 
             % Create jointNumber
             app.jointNumber = uilabel(app.UIFigure);
-            app.jointNumber.Position = [7 654 20 22];
+            app.jointNumber.Position = [7 634 20 22];
             app.jointNumber.Text = '1';
 
             % Create thetaVarValue
             app.thetaVarValue = uieditfield(app.UIFigure, 'text');
             app.thetaVarValue.InputType = 'alphanumerics';
             app.thetaVarValue.Visible = 'off';
-            app.thetaVarValue.Position = [100 655 20 20];
+            app.thetaVarValue.Position = [100 635 20 20];
             app.thetaVarValue.Value = 'd2';
 
             % Create icDotValue
             app.icDotValue = uieditfield(app.UIFigure, 'numeric');
             app.icDotValue.ValueChangedFcn = createCallbackFcn(app, @icDotValueValueChanged, true);
-            app.icDotValue.Position = [162 655 20 20];
+            app.icDotValue.Position = [162 635 20 20];
 
             % Create icDotLabel
             app.icDotLabel = uilabel(app.UIFigure);
             app.icDotLabel.Interpreter = 'latex';
-            app.icDotLabel.Position = [152 675 30 23];
+            app.icDotLabel.Position = [152 655 30 23];
             app.icDotLabel.Text = '\dot{$\theta_0$}/\dot{$d_0$}';
 
             % Create icDoubleDotValue
             app.icDoubleDotValue = uieditfield(app.UIFigure, 'numeric');
             app.icDoubleDotValue.ValueChangedFcn = createCallbackFcn(app, @icDoubleDotValueValueChanged, true);
-            app.icDoubleDotValue.Position = [182 655 20 20];
+            app.icDoubleDotValue.Position = [182 635 20 20];
 
             % Create icDoubleDotLabel
             app.icDoubleDotLabel = uilabel(app.UIFigure);
             app.icDoubleDotLabel.Interpreter = 'latex';
-            app.icDoubleDotLabel.Position = [182 675 29 23];
+            app.icDoubleDotLabel.Position = [182 655 29 23];
             app.icDoubleDotLabel.Text = '\ddot{$\theta_0$}/\ddot{$d_0$}';
 
             % Create dEquation
             app.dEquation = uieditfield(app.UIFigure, 'text');
             app.dEquation.ValueChangedFcn = createCallbackFcn(app, @dEquationValueChanged, true);
-            app.dEquation.Position = [202 655 60 20];
+            app.dEquation.Position = [202 635 60 20];
 
             % Create IJointValue
             app.IJointValue = uieditfield(app.UIFigure, 'numeric');
             app.IJointValue.ValueChangedFcn = createCallbackFcn(app, @IJointValueValueChanged, true);
             app.IJointValue.Visible = 'off';
-            app.IJointValue.Position = [182 655 20 20];
+            app.IJointValue.Position = [182 635 20 20];
 
             % Create IJointLabel
             app.IJointLabel = uilabel(app.UIFigure);
             app.IJointLabel.FontName = 'Times New Roman';
             app.IJointLabel.Visible = 'off';
-            app.IJointLabel.Position = [192 674 10 22];
+            app.IJointLabel.Position = [192 654 10 22];
             app.IJointLabel.Text = 'I';
 
             % Create dEquationLabel
             app.dEquationLabel = uilabel(app.UIFigure);
-            app.dEquationLabel.Position = [213 674 49 22];
+            app.dEquationLabel.Position = [213 654 49 22];
             app.dEquationLabel.Text = 'Equation';
 
             % Create ContextMenu
@@ -1110,6 +1583,12 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             % Create icDotMenu
             app.icDotMenu = uimenu(app.ContextMenu);
 
+            % Create mLinkMenu
+            app.mLinkMenu = uimenu(app.ContextMenu);
+
+            % Create ILinkMenu
+            app.ILinkMenu = uimenu(app.ContextMenu);
+
             % Create icDoubleDotMenu
             app.icDoubleDotMenu = uimenu(app.ContextMenu);
 
@@ -1119,6 +1598,7 @@ classdef MAE547_Final_Project_App < matlab.apps.AppBase
             % Assign app.ContextMenu
             app.UIFigure.ContextMenu = app.ContextMenu;
             app.aValue.ContextMenu = app.ContextMenu;
+            app.mLinkValue.ContextMenu = app.ContextMenu;
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';
