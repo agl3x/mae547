@@ -5,11 +5,11 @@ clear all; clc; close all;
 
 testmode = true; % example: cylindrical robot
 
-g0 = [0 -9.81 0];
+g0 = [0 0 -9.81];
 
 if testmode
     dh_raw = [0.5, 0, 0, 0;
-              0.5, 0, 0, 0];
+              0.5, 0, 0, 0]
 
     joint_types = ["R"; "R"];
       
