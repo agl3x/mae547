@@ -151,6 +151,60 @@ d2X_d = matlabFunction(d2X_d);
 disp("Starting simulink...")
 sim("inversedynamicstest.slx");
 
+%% Bridge to impedance model
+n_dof = N;
+
+DH = double(dh_raw);
+
+mass = params.m_l(:); 
+
+inertia = zeros(N, 3, 3);
+for i = 1:N
+    inertia(i,:,:) = diag([params.I_l(i), params.I_l(i), params.I_l(i)]);
+end
+
+% Center of mass
+com = zeros(N, 3);
+for i = 1:N
+    com(i,1) = dh_raw(i,1) / 2;
+end
+
+% Impedance gains
+Md = eye(6) * 10;
+Cd = eye(6) * 60;
+Kd = eye(6) * 400;
+
+% Desired pose — use end of your trajectory
+o_d = [1; 0; 0];   % replace with actual target, currently hardcoded 
+R_d = eye(3);
+
+% Initial conditions
+q0     = zeros(N, 1);
+qdot_0 = zeros(N, 1);
+dt    = 0.001;
+T_sim = t_f;
+
+% Assignment from workspace to simulink constants
+assignin('base', 'DH',      DH);
+assignin('base', 'mass',    mass);
+assignin('base', 'com',     com);
+assignin('base', 'inertia', inertia);
+assignin('base', 'Md',      Md);
+assignin('base', 'Cd',      Cd);
+assignin('base', 'Kd',      Kd);
+assignin('base', 'o_d',     o_d);
+assignin('base', 'R_d',     R_d);
+assignin('base', 'q0',      q0);
+assignin('base', 'q_dot0',  qdot_0);
+assignin('base', 'dt',      dt);
+assignin('base', 'T_sim',   T_sim);
+assignin('base', 'n_dof',   n_dof);
+
+open_system("impedanceSimulink.slx")
+set_param("impedanceSimulink", "SimulationMode", "normal")
+disp("Starting impedance control simulation...")
+sim("impedanceSimulink.slx");
+
 
 
 
