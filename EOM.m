@@ -126,8 +126,8 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
         Jpm_i = JpM(:, :, i);   
         Jom_i = JoM(:, :, i); 
 
-        B = B + mL(i)*(Jp_i.'*Jp_i) + Jo_i.'*R_0i*IL(i)*R_0i'*Jo_i ...
-              + mm(i)*(Jpm_i.'*Jpm_i) + Jom_i.'*R_0mi*Im(i)*R_0mi'*Jom_i;
+        B = B + mL(i)*(Jp_i.'*Jp_i) + Jo_i.'*R_0i*IL(i)*R_0i.'*Jo_i ...
+              + mm(i)*(Jpm_i.'*Jpm_i) + Jom_i.'*R_0mi*Im(i)*R_0mi.'*Jom_i;
        
     end
 
