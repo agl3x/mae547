@@ -23,7 +23,7 @@ if ~testing
     
     waitfor(input_ui, 'solving', 1)
 
-    example = input_ui.solveExample;
+    example = input_ui.solvingExample;
 
     if ~example
         x = input_ui.jointCount;
@@ -54,10 +54,13 @@ if ~testing
         h_e = input_ui.heValues;
     
         q0 = input_ui.icValues;
+        q0 = q0';
         qd0 = input_ui.icDotValues;
+        qd0 = qd0';
     
         x_d = input_ui.xdEquations;
-        x_d = str2func(x_d);
+        x_d = str2sym(x_d);
+       
     
         t_stop = input_ui.tValues;
     
