@@ -1,96 +1,66 @@
-function [o_d, odot_d, oddot_d, R_d, omega_d, omegadot_d] = trajectory(t, ...
-    a, alpha, d, theta, ...
-    xi, xf, tf, deg)
+function [o_d, odot_d, oddot_d, R_d, omega_d, omegadot_d] = trajectory(x_d, t)
+% x_d : 6x1 [x; y; z; psi(t); theta(t); phi(t)]
+%   psi   = yaw (Z), theta = pitch (Y), phi = roll (X)
+%   ZYX: R_d = Rz(psi) * Ry(theta) * Rx(phi)
 
-n = length(a);
+dt = 1e-5;
 
-Ri = dh_rotation(a, alpha, d, theta, xi, n);
-Rf = dh_rotation(a, alpha, d, theta, xf, n);
+% -----------------------------------------------------------------------
+% USER DEFINES TRAJECTORY HERE
+% x_d is passed in from GUI for position (rows 1-3).
+% For angles, define them explicitly as functions of t so we can
+% differentiate at t+dt and t-dt.
+% Replace these with your actual angle equations:
+psi_fn   = @(tt) x_d(4);   % e.g. @(tt) 0.5*sin(tt)
+theta_fn = @(tt) x_d(5);   % e.g. @(tt) 0.1*tt
+phi_fn   = @(tt) x_d(6);   % e.g. @(tt) 0
+% -----------------------------------------------------------------------
 
-ti = 0;
-tc  = max(ti, min(tf, t));
-tau = (tc - ti) / (tf - ti);
-dt  = tf - ti;
+% --- Evaluate angles at t-dt, t, t+dt ---
+angles_m = [x_d(1:3); psi_fn(t-dt); theta_fn(t-dt); phi_fn(t-dt)];
+angles_0 = [x_d(1:3); psi_fn(t);    theta_fn(t);    phi_fn(t)];
+angles_p = [x_d(1:3); psi_fn(t+dt); theta_fn(t+dt); phi_fn(t+dt)];
 
-if deg >= 5
-    bs = 6*tau^5  - 15*tau^4  + 10*tau^3;
-    bsd = (30*tau^4 - 60*tau^3  + 30*tau^2) / dt;
-    bsdd = (120*tau^3 - 180*tau^2 + 60*tau) / dt^2;
-else
-    bs = 3*tau^2-2*tau^3;
-    bsd = (6*tau-6*tau^2) / dt;
-    bsdd = (6-12*tau) / dt^2;
-end
+% --- Position (pass-through from x_d) ---
+o_d     = x_d(1:3);
+odot_d  = (angles_p(1:3) - angles_m(1:3)) / (2*dt);
+oddot_d = (angles_p(1:3) - 2*angles_0(1:3) + angles_m(1:3)) / dt^2;
 
-delta = xf(:) - xi(:);
-o_d = xi(:) + bs*delta;
-odot_d  = bsd * delta;
-oddot_d = bsdd * delta;
+% --- Rotation matrices ---
+R_m = eul2rot_ZYX(angles_m(4), angles_m(5), angles_m(6));
+R_0 = eul2rot_ZYX(angles_0(4), angles_0(5), angles_0(6));
+R_p = eul2rot_ZYX(angles_p(4), angles_p(5), angles_p(6));
 
-dR= Ri' * Rf;
-log_dR = mat_log_so3(dR);
-R_d = Ri * mat_exp_so3(bs * log_dR);
-omega_d = vex(Ri * (bsd * log_dR) * R_d');
-omegadot_d = vex(Ri * (bsdd * log_dR) * R_d');
+R_d = R_0;
 
-o_d = o_d(:);
-odot_d = odot_d(:);
-oddot_d = oddot_d(:);
-omega_d = omega_d(:);
+% --- Angular velocity and acceleration ---
+Rdot  = (R_p - R_m) / (2*dt);
+Rddot = (R_p - 2*R_0 + R_m) / dt^2;
+
+omega_d    = vex(Rdot  * R_0');
+omegadot_d = vex(Rddot * R_0' + Rdot * Rdot');
+
+% --- Ensure column vectors ---
+o_d        = o_d(:);
+odot_d     = odot_d(:);
+oddot_d    = oddot_d(:);
+omega_d    = omega_d(:);
 omegadot_d = omegadot_d(:);
-
 end
 
-function R = dh_rotation(a, alpha, d, theta_offset, q, n)
-%T_i = Rz(theta_i) * Tz(d_i) * Tx(a_i) * Rx(alpha_i)
-    T = eye(4);
-    for i = 1:n
-        ct = cos(q(i) + theta_offset(i));
-        st = sin(q(i) + theta_offset(i));
-        ca = cos(alpha(i));
-        sa = sin(alpha(i));
-        Ti = [ct  -st*ca   st*sa   a(i)*ct;
-               st   ct*ca  -ct*sa   a(i)*st;
-                0      sa      ca      d(i);
-                0       0       0         1];
-        T = T*Ti;
-    end
-    R = T(1:3, 1:3);
-end
-
-function S = skew(v)
-    S = [ 0    -v(3)  v(2);
-          v(3)  0    -v(1);
-         -v(2)  v(1)  0];
+function R = eul2rot_ZYX(psi, theta, phi)
+Rz = [ cos(psi) -sin(psi) 0;
+        sin(psi)  cos(psi) 0;
+        0         0        1];
+Ry = [ cos(theta) 0 sin(theta);
+        0          1 0;
+       -sin(theta) 0 cos(theta)];
+Rx = [1 0        0;
+       0 cos(phi) -sin(phi);
+       0 sin(phi)  cos(phi)];
+R  = Rz * Ry * Rx;
 end
 
 function v = vex(S)
     v = [S(3,2); S(1,3); S(2,1)];
-end
-
-function R = mat_exp_so3(S)
-    v = vex(S);
-    theta = norm(v);
-    if theta < 1e-10
-        R = eye(3);
-    else
-        K = S / theta;
-        R = eye(3) + sin(theta)*K + (1 - cos(theta))*(K*K);
-    end
-end
-
-function S = mat_log_so3(R)
-    val = max(-1, min(1, (trace(R) - 1) / 2));
-    theta = acos(val);
-    if theta < 1e-10
-        S = zeros(3,3);
-    elseif abs(theta - pi) < 1e-6
-        B = (R + R') / 2 - eye(3);
-        [~, idx] = max(diag(B));
-        v = sqrt(max(0, B(idx,idx) + 1));
-        axis_vec = R(:,idx) / v;
-        S = skew(theta * axis_vec);
-    else
-        S = (theta / (2*sin(theta))) * (R - R');
-    end
 end
