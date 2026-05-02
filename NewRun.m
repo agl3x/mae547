@@ -23,7 +23,7 @@ if ~testing
     
     waitfor(input_ui, 'solving', 1)
 
-    example = input_ui.solvingExample;
+    example = input_ui.solveExample;
 
     if ~example
         x = input_ui.jointCount;
