@@ -6,8 +6,8 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 1;
-testing = false;
+mode = 0;
+testing = true;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
 
@@ -16,33 +16,35 @@ g0 = [0, 0, -9.81];    % gravity in -Z direction
 if testing
 
     % robot properties
-    L1 = 0.40;   % upper arm length  [m]
-    L2 = 0.35;   % forearm length    [m]
-    L3 = 0.25;   % wrist offset      [m]
 
-    %        a         alpha    d   theta
-    dh_raw = [0,       pi/2,   0,   0;    % joint 1: shoulder pan
-              L1,      0,      0,   0;    % joint 2: shoulder lift
-              L2+L3,   0,      0,   0];   % joint 3: elbow flex
+    a2 = 0.5;
+    a3 = 0.5;
+    a4 = 0.5;
 
-    joint_types = ["R"; "R"; "R"];
+    dh_raw = [0,    pi/2,   0,   0;   
+              a2,      0,   0,   0;       
+              0,    pi/2,   0,   0
+              a4,      0,   0,   0];
+
+    joint_types = ["R"; "R"; "R"; "R"];
     DOF = length(joint_types);
 
-    m_l = [2.5,  1.8,  0.8];       % link masses        [kg]
-    m_m = [0.5,  0.4,  0.3];       % motor masses       [kg]
-    I_l = [0.08, 0.04, 0.01];      % link inertias      [kg·m²]
-    I_m = [0.005,0.003,0.001];     % motor inertias     [kg·m²]
-    k_r = [50,   50,   30  ];      % gear ratios (high torque)
-    F_s = [0,    0,    0   ];      % static friction
-    F_v = [0,    0,    0   ];      % viscous friction
+    m_l = ones(1, DOF) * 2;       % link masses        [kg]
+    m_m = ones(1, DOF) * 0.3;       % motor masses       [kg]
+    I_l = ones(1, DOF) * 0.03;      % link inertias      [kg·m²]
+    I_m = ones(1, DOF) * 0.001;     % motor inertias     [kg·m²]
+    k_r = ones(1, DOF) * 50;      % gear ratios (high torque)
+    F_s = ones(1, DOF) * 0;      % static friction
+    F_v = ones(1, DOF) * 0;      % viscous friction
     
     % scenario properties
 
-    q0  = [pi/4; pi/4; -pi/4];
-    dq0 = [0; 0; 0];
+    q0  = ones(DOF, 1) * pi/6;
+    dq0 = zeros(DOF, 1);
 
-    x_d  = @(t) [0.10*t; 0.20; 0.30; 0; 0; 0];
+    x_d  = @(t) [0.10*t; 0.20*t; 0.30*t; 0; 0; 0];
     xd_d  = @(t) [.1; 0; 0; 0; 0; 0];
+    
     t_stop = 10;
     % xd_d = zeros(6, 1);
     
@@ -104,28 +106,31 @@ end
 
 %% Stage 1.5: Build Robot Toolbox Model
 
-Links = [];
-for i=1:N
+for i=1:DOF
     if joint_types(i) == "R"
-        Links(i) = Revolute('d', 0, ...   % link length (Dennavit-Hartenberg notation)
-            'a', A(i), ...               % link offset (Dennavit-Hartenberg notation)
-            'alpha', alpha(i), ...        % link twist (Dennavit-Hartenberg notation)
-            'I', [0, 0, I_l(i), 0, 0, 0], ... % inertia tensor of link with respect to center of mass I = [L_xx, L_yy, L_zz, L_xy, L_yz, L_xz]
-            'r', [l(i), 0, 0], ...       % distance of ith origin to center of mass [x,y,z] in link reference frame
-            'm', m(i), ...               % mass of link
-            'Jm', I_m(i), ...         % actuator inertia 
-            'G', k_r(i)); % gear ratio
+        Links(i) = Revolute;
     elseif joint_types(i) == "P"
-        Links(i) = Revolute('d', 0, ...   % link length (Dennavit-Hartenberg notation)
-            'a', A(i), ...               % link offset (Dennavit-Hartenberg notation)
-            'alpha', alpha(i), ...        % link twist (Dennavit-Hartenberg notation)
-            'I', [0, 0, I_l(i), 0, 0, 0], ... % inertia tensor of link with respect to center of mass I = [L_xx, L_yy, L_zz, L_xy, L_yz, L_xz]
-            'r', [l(i), 0, 0], ...       % distance of ith origin to center of mass [x,y,z] in link reference frame
-            'm', m(i), ...               % mass of link
-            'Jm', I_m(i), ...         % actuator inertia 
-            'G', k_r(i)); % gear ratio
+        Links(i) = Prismatic;
     end
+
+    Links(i).a     = dh_raw(i, 1);
+    Links(i).alpha = dh_raw(i, 2);
+    Links(i).d     = dh_raw(i, 3);
+    Links(i).theta = dh_raw(i, 4);    
+ 
+    % Links(i).m  = m_l(i);
+    % Links(i).I  = [0, 0, I_l(i), 0, 0, 0];
+    % Links(i).Jm = I_m(i);
+    % Links(i).G  = k_r(i);
+    % Links(i).B  = F_v(i);
+    % Links(i).Tc = F_s(i);
 end
+
+robot = SerialLink(Links, 'name', 'robot', 'configs', {'q0', q0});
+
+f = figure;
+robot.plot(q0')
+uiwait(f)
 
 
 %% Stage 2: Determine Symbolic EOM
@@ -210,14 +215,6 @@ elseif mode == 1 % Compliance
     disp("Starting CompControl simulation...")
     out = sim("CompControl_V2.slx");
     disp("Done. Run plot_results.m for output plots.")
-
-
-
-
-
-
-
-
 
 
 
