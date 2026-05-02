@@ -261,7 +261,7 @@ for i = 1:3
     subplot(3, 1, i);
     hold on; grid on;
     plot(t, h_e(:, i),   'r-',  'LineWidth', 1.5, 'DisplayName', force_labels{i});
-    yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
+    % yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
     xlabel('Time (s)');
     ylabel(force_labels{i});
     legend('Location', 'best');
