@@ -6,8 +6,13 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
+<<<<<<< HEAD
 mode = 2;
 testing = true;
+=======
+mode = 1;
+testing = false;
+>>>>>>> 343b48b864de5f1e0a1e66f7172527c60a48446c
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
 
@@ -95,13 +100,39 @@ else
 
     kpkmd = input_ui.kpkmdValues;
     
-    K_p = eye(DOF) * kpkmd(1);
-    K_d = eye(DOF) * kpkmd(2);
-    M_d = eye(DOF) * kpkmd(3);
+    K_p = kpkmd(1);
+    K_d = kpkmd(2);
+    M_d = kpkmd(3);
     
     delete(input_ui)
 
 end
+
+%% Stage 1.5: Build Robot Toolbox Model
+
+Links = [];
+for i=1:N
+    if joint_types(i) == "R"
+        Links(i) = Revolute('d', 0, ...   % link length (Dennavit-Hartenberg notation)
+            'a', A(i), ...               % link offset (Dennavit-Hartenberg notation)
+            'alpha', alpha(i), ...        % link twist (Dennavit-Hartenberg notation)
+            'I', [0, 0, I_l(i), 0, 0, 0], ... % inertia tensor of link with respect to center of mass I = [L_xx, L_yy, L_zz, L_xy, L_yz, L_xz]
+            'r', [l(i), 0, 0], ...       % distance of ith origin to center of mass [x,y,z] in link reference frame
+            'm', m(i), ...               % mass of link
+            'Jm', I_m(i), ...         % actuator inertia 
+            'G', k_r(i)); % gear ratio
+    elseif joint_types(i) == "P"
+        Links(i) = Revolute('d', 0, ...   % link length (Dennavit-Hartenberg notation)
+            'a', A(i), ...               % link offset (Dennavit-Hartenberg notation)
+            'alpha', alpha(i), ...        % link twist (Dennavit-Hartenberg notation)
+            'I', [0, 0, I_l(i), 0, 0, 0], ... % inertia tensor of link with respect to center of mass I = [L_xx, L_yy, L_zz, L_xy, L_yz, L_xz]
+            'r', [l(i), 0, 0], ...       % distance of ith origin to center of mass [x,y,z] in link reference frame
+            'm', m(i), ...               % mass of link
+            'Jm', I_m(i), ...         % actuator inertia 
+            'G', k_r(i)); % gear ratio
+    end
+end
+
 
 %% Stage 2: Determine Symbolic EOM
 
@@ -253,6 +284,8 @@ elseif mode == 2
 
 end
 
+
+%% Stage 4: Plot results
 
 
 
