@@ -1,4 +1,7 @@
 .DS_Store
+*.mat
+*.l
+*.xml
 slprj/_jitprj/jitEngineAccessInfo.mat
 slprj/_jitprj/jitEngineAccessInfo.mat
 slprj/_sfprj/EMLReport/emlReportAccessInfo.mat
