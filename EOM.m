@@ -1,4 +1,4 @@
-function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type) 
+function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type,Fv, Fs) 
     % Find jacobians & Equations of motion for a robotic arm
     % dh - Denavit-Hartenberg table - order (a, alpha, d, theta) [n x4]
     % mL - mass of each link [1xn]
@@ -6,6 +6,8 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
     % kr - motor ratio
     % Joint_type "P"-Prismatic, "R" Revolute
     % g0 [x y z] , input direction of gravity
+    % Fv - Viscous Friction
+    % Fs - Static (coulumb) friction
 
 
     n = size(dh,1); % # of joints
@@ -184,12 +186,18 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
 
     EOM.G = -simplify(G);
 
+    F = sym(zeros(n,1));
+    k_tanh = 100; % sharpness of tanh approximation to sign()
+    for i = 1:n
+        F(i) = Fv(i) * qd(i) + Fs(i) * tanh(k_tanh * qd(i));
+    end
 
+    EOM.F = simplify(F);
 
     %% Combine Matricies into EOM
     EOM.tau = sym('tau', [n 1]);
 
-    EOM.tau = simplify(B*qdd + c*qd + G);
+    EOM.tau = simplify(B*qdd + c*qd + G + F);
 end
 
 
