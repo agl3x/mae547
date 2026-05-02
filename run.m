@@ -136,6 +136,10 @@ G = matlabFunction(G);
 
 t_i = 0;
 t_f = 10;
+a = 0;
+alpha =0;
+d=0;
+theta=0;
 
 
 dimensions = 4;
@@ -183,7 +187,10 @@ dt    = 0.001;
 T = t_f;
 
 % Assignment from workspace to simulink constants
-assignin('base',)
+assignin('base', 'a',       a);
+assignin('base', 'd',       d);
+assignin('base', 'alpha',   alpha);
+assignin('base', 'theta',   theta);
 assignin('base', 'DH',      DH);
 assignin('base', 'mass',    mass);
 assignin('base', 'com',     com);
