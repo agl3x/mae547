@@ -136,10 +136,7 @@ G = matlabFunction(G);
 
 t_i = 0;
 t_f = 10;
-a = 0;
-alpha =0;
-d=0;
-theta=0;
+
 
 
 dimensions = 4;
@@ -157,6 +154,10 @@ sim("inversedynamicstest.slx");
 
 %% Bridge to impedance model
 DH = double(dh_raw);
+a = dh_raw(:,1);
+alpha = dh_raw(:,2);
+d = dh_raw(:,3);
+theta = dh_raw(:,4);
 
 mass = params.m_l(:); 
 
@@ -181,6 +182,8 @@ o_d = [1; 0; 0];   % replace with actual target, currently hardcoded
 R_d = eye(3);
 
 % Initial conditions
+xi = zeros(N, 1);
+xf = zeros(N, 1);
 q0     = zeros(N, 1);
 qdot_0 = zeros(N, 1);
 dt    = 0.001;
@@ -205,6 +208,8 @@ assignin('base', 'q_dot0',  qdot_0);
 assignin('base', 'dt',      dt);
 assignin('base', 'T_sim',   T);
 assignin('base', 'n_dof',   N);
+assignin('base', 'xi',      xi);
+assignin('base', 'xf',      xf);
 
 open_system("impedanceSimulink.slx")
 set_param("impedanceSimulink", "SimulationMode", "normal")
@@ -212,7 +217,41 @@ disp("Starting impedance control simulation...")
 Impedance_out = sim("impedanceSimulink.slx");
 
 
+%% Exporting xe and xd
 
+t_log = Impedance_out.tout;
+
+try
+    x_d = Impedance_out.x_d_log;
+catch
+    try
+        x_d = logsout.getElement('x_d_log').Values.Data;
+    catch
+        error("x_d_log not found. Check your To Workspace block name.")
+    end
+end
+
+try
+    x_e = Impedance_out.x_e_log;
+catch
+    try
+        x_e = logsout.getElement('x_e_log').Values.Data;
+    catch
+        error("x_e_log not found. Check your To Workspace block name.")
+    end
+end
+
+% % ── Handle array dimensions ───────────────────────────────────────────
+% % Simulink To Workspace outputs [timesteps x signal_dim]
+% % If it comes out transposed, fix it:
+% if size(x_d, 1) ~= length(t_log)
+%     x_d = x_d';
+% end
+% if size(x_e, 1) ~= length(t_log)
+%     x_e = x_e';
+% end
+
+n_dims = size(x_d, 2);   % number of DOF / task-space dims
 
 
 
