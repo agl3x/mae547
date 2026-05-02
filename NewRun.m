@@ -6,14 +6,77 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 2;
-testing = true;
+mode = 1;
+testing = false;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
 
 %% Stage 1: Input
 
-if testing
+example = false;
+
+if ~testing
+
+    % launch gui window
+    input_ui = RoboticSim();
+    disp(input_ui)
+    
+    waitfor(input_ui, 'solving', 1)
+
+    example = input_ui.solvingExample;
+
+    if ~example
+        x = input_ui.jointCount;
+    
+        % robot properties
+        a     = input_ui.aValues;
+        alpha = input_ui.alphaValues;
+        d     = input_ui.dValues;
+        theta = input_ui.thetaValues;
+        rp    = input_ui.rpValues;
+    
+        dh_raw = [a',alpha',d',theta'];
+        joint_types = extractBefore(string(rp), 2);
+        DOF = length(joint_types);
+    
+        m_l = input_ui.mLinkValues;
+        m_m = input_ui.mJointValues;
+        I_m = input_ui.IJointValues;
+        I_l = input_ui.ILinkValues; 
+        k_r = input_ui.krValues;
+        F_s = input_ui.sfValues;
+        F_v = input_ui.vfValues;
+        
+        
+        % scenario properties
+    
+        g0 = input_ui.gValues;
+        h_e = input_ui.heValues;
+    
+        q0 = input_ui.icValues;
+        qd0 = input_ui.icDotValues;
+    
+        x_d = input_ui.xdEquations;
+        x_d = str2func(x_d);
+    
+        t_stop = input_ui.tValues;
+    
+        % controller properties
+    
+        mode = input_ui.menu - 1;
+    
+        kpkmd = input_ui.kpkmdValues;
+        
+        K_p = kpkmd(1);
+        K_d = kpkmd(2);
+        M_d = kpkmd(3);
+    end
+    
+    delete(input_ui)
+
+end
+
+if testing || example
 
     % robot properties
 
@@ -54,60 +117,6 @@ if testing
     K_d = 40;
     M_d = 10;
    
-
-else
-
-    % launch gui window
-    input_ui = RoboticSim();
-    disp(input_ui)
-    
-    waitfor(input_ui, 'solving', 1)
-    x = input_ui.jointCount;
-
-    % robot properties
-    a     = input_ui.aValues;
-    alpha = input_ui.alphaValues;
-    d     = input_ui.dValues;
-    theta = input_ui.thetaValues;
-    rp    = input_ui.rpValues;
-
-    dh_raw = [a',alpha',d',theta'];
-    joint_types = extractBefore(string(rp), 2);
-    DOF = length(joint_types);
-
-    m_l = input_ui.mLinkValues;
-    m_m = input_ui.mJointValues;
-    I_m = input_ui.IJointValues;
-    I_l = input_ui.ILinkValues; 
-    k_r = input_ui.krValues;
-    F_s = input_ui.sfValues;
-    F_v = input_ui.vfValues;
-    
-    
-    % scenario properties
-
-    g0 = input_ui.gValues;
-    h_e = input_ui.heValues;
-
-    q0 = input_ui.icValues;
-    qd0 = input_ui.icDotValues;
-
-    x_d = input_ui.xdEquations;
-    x_d = str2func(x_d);
-
-    t_stop = input_ui.tValues;
-
-    % controller properties
-
-    mode = input_ui.menu - 1;
-
-    kpkmd = input_ui.kpkmdValues;
-    
-    K_p = kpkmd(1);
-    K_d = kpkmd(2);
-    M_d = kpkmd(3);
-    
-    delete(input_ui)
 
 end
 
