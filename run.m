@@ -136,10 +136,7 @@ G = matlabFunction(G);
 
 t_i = 0;
 t_f = 10;
-a = 0;
-alpha =0;
-d=0;
-theta=0;
+
 
 
 dimensions = 4;
@@ -157,6 +154,10 @@ sim("inversedynamicstest.slx");
 
 %% Bridge to impedance model
 DH = double(dh_raw);
+a = dh_raw(1,:);
+alpha = dh_raw(2,:);
+d = dh_raw(3,:);
+theta = dh_raw(4,:);
 
 mass = params.m_l(:); 
 
