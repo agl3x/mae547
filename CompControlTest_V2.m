@@ -58,8 +58,8 @@ if testmode
     % EE position at q0 via forward kinematics:
     %   p_x = (L1+L2+L3)*cos(q1)*cos(q2+q3) ... (approx, exact from FK)
     % Set desired to a nearby reachable point:
-    x_d  = [0.40; 0.20; 0.30; 0; 0; 0];  % desired pose [pos(m); rpy(rad)]
-    xd_d = zeros(6, 1);                   % regulation task (stationary)
+    %x_d  = [0.40; 0.20; 0.30; 0; 0; 0];  % desired pose [pos(m); rpy(rad)]
+    %xd_d = zeros(6, 1);                   % regulation task (stationary)
 
     % Step contact force: 8 N push in -X direction, turns on at t = 2 s
     % Implemented in Simulink as: h_e_mag * (t >= t_step)
@@ -70,6 +70,10 @@ if testmode
     % NOTE: wire h_e in Simulink as a Step block:
     %   Initial value = [0;0;0;0;0;0], Final value = h_e, Step time = t_step_he
     % OR use the constant h_e above for a constant-force test.
+
+    x_d = @(t) [cos(t); sin(t); .1*t 0 0 0];
+
+    xd_d = ;
 
 else
     input_ui = MAE547_Final_Project_App();
