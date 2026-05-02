@@ -182,8 +182,6 @@ o_d = [1; 0; 0];   % replace with actual target, currently hardcoded
 R_d = eye(3);
 
 % Initial conditions
-xi = zeros(N, 1);
-xf = zeros(N, 1);
 q0     = zeros(N, 1);
 qdot_0 = zeros(N, 1);
 dt    = 0.001;
@@ -206,10 +204,7 @@ assignin('base', 'R_d',     R_d);
 assignin('base', 'q0',      q0);
 assignin('base', 'q_dot0',  qdot_0);
 assignin('base', 'dt',      dt);
-assignin('base', 'T_sim',   T);
-assignin('base', 'n_dof',   N);
-assignin('base', 'xi',      xi);
-assignin('base', 'xf',      xf);
+assignin('base', 'xd',      xd);
 
 open_system("impedanceSimulink.slx")
 set_param("impedanceSimulink", "SimulationMode", "normal")
