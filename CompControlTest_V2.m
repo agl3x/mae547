@@ -1,3 +1,4 @@
+%% CompControlTest_V2
 clear; clc; close all;
 
 %% ── Robot definition ────────────────────────────────────────────────────
@@ -71,9 +72,8 @@ if testmode
     %   Initial value = [0;0;0;0;0;0], Final value = h_e, Step time = t_step_he
     % OR use the constant h_e above for a constant-force test.
 
-    x_d = @(t) [cos(t); sin(t); .1*t 0 0 0];
-
-    xd_d = ;
+    x_d = @(t) [cos(t); sin(t); .1*t; 0; 0; 0];
+    xd_d = @(t) [-sin(t); cos(t); .1; 0;0;0];
 
 else
     input_ui = MAE547_Final_Project_App();
@@ -122,30 +122,30 @@ I_l = params.I_l(:);
 I_m = params.I_m(:);
 k_r = params.k_r(:);
 
-%% ── Symbolic EOM (for display and report) ────────────────────────────────
-
-q_sym  = sym('q',  [1 N]);
-dq_sym = sym('dq', [1 N]);
-assume(q_sym,  'real')
-assume(dq_sym, 'real')
-
-dh_sym = sym(dh_raw);
-for i = 1:N
-    if joint_types(i) == "R"
-        dh_sym(i,4) = dh_sym(i,4) + q_sym(i);
-    else
-        dh_sym(i,3) = dh_sym(i,3) + q_sym(i);
-    end
-end
-
-disp("Calculating symbolic equations of motion...")
-[EOM2] = EOM(dh_sym, sym(params.m_l), sym(params.m_m), ...
-              sym(params.I_l), sym(params.I_m), sym(params.k_r), ...
-              g0, joint_types);
-
-disp("B(q):"),    disp(EOM2.B)
-disp("C(q,dq):"), disp(EOM2.c)
-disp("G(q):"),    disp(EOM2.G)
+% %% ── Symbolic EOM (for display and report) ────────────────────────────────
+% 
+% q_sym  = sym('q',  [1 N]);
+% dq_sym = sym('dq', [1 N]);
+% assume(q_sym,  'real')
+% assume(dq_sym, 'real')
+% 
+% dh_sym = sym(dh_raw);
+% for i = 1:N
+%     if joint_types(i) == "R"
+%         dh_sym(i,4) = dh_sym(i,4) + q_sym(i);
+%     else
+%         dh_sym(i,3) = dh_sym(i,3) + q_sym(i);
+%     end
+% end
+% 
+% disp("Calculating symbolic equations of motion...")
+% [EOM2] = EOM(dh_sym, sym(params.m_l), sym(params.m_m), ...
+%               sym(params.I_l), sym(params.I_m), sym(params.k_r), ...
+%               g0, joint_types);
+% 
+% disp("B(q):"),    disp(EOM2.B)
+% disp("C(q,dq):"), disp(EOM2.c)
+% disp("G(q):"),    disp(EOM2.G)
 
 %% ── Compliance control gains ─────────────────────────────────────────────
 %
