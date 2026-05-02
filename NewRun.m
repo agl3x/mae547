@@ -2,13 +2,18 @@
 clc; clear; close all;
 
 
-%% Load UI
+% mode 0: dynamics simulation
+% mode 1: compliance control
+% mode 2: impedance control
 
-testmode = true;
+mode = 1;
+testing = true;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
 
-if testmode
+%% Stage 1: Input
+
+if testing
 
     % robot properties
     L1 = 0.40;   % upper arm length  [m]
@@ -49,6 +54,8 @@ if testmode
    
 
 else
+
+    % launch gui window
     input_ui = MAE547_Final_Project_App();
     disp(input_ui)
     
@@ -79,6 +86,8 @@ else
 
     % controller properties
 
+    mode = input_ui.menu - 1;
+
     kpkmd = input_ui.kpkmdValues;
     
     K_p = eye(DOF) * kpkmd(1);
@@ -89,7 +98,7 @@ else
 
 end
 
-%% ── Symbolic EOM (for display and report) ────────────────────────────────
+%% Stage 2: Determine Symbolic EOM
 
 q_sym  = sym('q',  [1 DOF]);
 dq_sym = sym('dq', [1 DOF]);
@@ -120,37 +129,69 @@ disp(EOM1.c)
 disp("G(q):")
 disp(EOM1.G)
 
-t_i = 0;
-t_f = 10;
+% t_i = 0;
+% t_f = 10;
+% 
+% dimensions = 6;
+% X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
+% dX_d = diff(X_d);
+% d2X_d = diff(X_d, 2);
+% 
+% 
+% X_d = matlabFunction(X_d);
+% dX_d = matlabFunction(dX_d);
+% d2X_d = matlabFunction(d2X_d);
+% 
+% disp(X_d)
+% disp(dX_d)
+% disp(d2X_d)
 
-dimensions = 6;
-X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
-dX_d = diff(X_d);
-d2X_d = diff(X_d, 2);
+
+%% Stage 3: Run simulation with chosen dyanamic model
+
+if mode == 0
+    disp("Dyn sim not implemented yet")
+
+elseif mode == 1
+
+    disp("Solving with compliance control")
+
+    dh_base = dh_raw;       % n x 4  [a, alpha, d, theta]  (zeros where q goes)
+
+    jt = zeros(DOF, 1);
+    for i = 1:DOF
+        jt(i) = double(joint_types(i) == "R");   % 1=revolute, 0=prismatic
+    end
+    
+    m_l = m_l(:);
+    m_m = m_m(:);
+    I_l = I_l(:);
+    I_m = I_m(:);
+    k_r = k_r(:);
 
 
-X_d = matlabFunction(X_d);
-dX_d = matlabFunction(dX_d);
-d2X_d = matlabFunction(d2X_d);
-
-disp(X_d)
-disp(dX_d)
-disp(d2X_d)
 
 
-%% ── Numeric workspace variables for Simulink Constant blocks ─────────────
 
-dh_base = dh_raw;       % n x 4  [a, alpha, d, theta]  (zeros where q goes)
 
-jt = zeros(DOF, 1);
-for i = 1:DOF
-    jt(i) = double(joint_types(i) == "R");   % 1=revolute, 0=prismatic
+
+
+
+
+
+
+
+
+
+
+
+elseif mode == 2
+    disp("Solving with impedance control")
+
 end
 
-m_l = m_l(:);
-m_m = m_m(:);
-I_l = I_l(:);
-I_m = I_m(:);
-k_r = k_r(:);
+
+
+
 
 
