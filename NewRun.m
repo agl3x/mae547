@@ -6,7 +6,7 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 0;
+mode = 1;
 testing = true;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
@@ -23,10 +23,9 @@ if testing
 
     dh_raw = [0,    pi/2,   0,   0;   
               a2,      0,   0,   0;       
-              0,    pi/2,   0,   0
               a4,      0,   0,   0];
 
-    joint_types = ["R"; "R"; "R"; "R"];
+    joint_types = ["R"; "R"; "R"];
     DOF = length(joint_types);
 
     m_l = ones(1, DOF) * 2;       % link masses        [kg]
@@ -43,7 +42,11 @@ if testing
     dq0 = zeros(DOF, 1);
 
     x_d  = @(t) [0.10*t; 0.20*t; 0.30*t; 0; 0; 0];
-    xd_d  = @(t) [.1; 0; 0; 0; 0; 0];
+    
+    x_d = sym(x_d);
+    xdd_d = matlabFunction(diff(x_d, 2));
+    xd_d = matlabFunction(diff(x_d));
+    x_d = matlabFunction(x_d);
     
     t_stop = 10;
     % xd_d = zeros(6, 1);
@@ -163,23 +166,6 @@ disp(EOM1.c)
 
 disp("G(q):")
 disp(EOM1.G)
-
-% t_i = 0;
-% t_f = 10;
-% 
-% dimensions = 6;
-% X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
-% dX_d = diff(X_d);
-% d2X_d = diff(X_d, 2);
-% 
-% 
-% X_d = matlabFunction(X_d);
-% dX_d = matlabFunction(dX_d);
-% d2X_d = matlabFunction(d2X_d);
-% 
-% disp(X_d)
-% disp(dX_d)
-% disp(d2X_d)
 
 
 %% Stage 3: Run simulation with chosen dyanamic model
