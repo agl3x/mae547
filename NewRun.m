@@ -6,7 +6,7 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 0;
+mode = 2;
 testing = true;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
@@ -17,12 +17,12 @@ if testing
 
     % robot properties
 
-    a2 = 0.5;
-    a3 = 0.5;
-    a4 = 0.5;
+    a2 = 0.7;
+    a3 = 0.7;
+    a4 = 0.7;
 
     dh_raw = [0,    pi/2,   0,   0;   
-              a2,      0,   0,   0;       
+              a2,      0,   0,   0;
               a4,      0,   0,   0];
 
     joint_types = ["R"; "R"; "R"];
@@ -70,7 +70,7 @@ else
     d     = input_ui.dValues;
     theta = input_ui.thetaValues;
     rp    = input_ui.rpValues;
-    
+
     dh_raw = [a',alpha',d',theta'];
     joint_types = extractBefore(string(rp), 2);
     DOF = length(joint_types);
@@ -83,10 +83,19 @@ else
     F_s = input_ui.sfValues;
     F_v = input_ui.vfValues;
     
+    
     % scenario properties
 
-    t_values = input_ui.tValues;
+    g0 = input_ui.gValues;
+    h_e = input_ui.heValues;
 
+    q0 = input_ui.icValues;
+    qd0 = input_ui.icDotValues;
+
+    x_d = input_ui.xdEquations;
+    x_d = str2func(x_d);
+
+    t_stop = input_ui.tValues;
 
     % controller properties
 
@@ -125,9 +134,9 @@ end
 
 robot = SerialLink(Links, 'name', 'robot');
 
-% f = figure;
-% robot.plot(q0')
-% uiwait(f)
+f = figure;
+robot.plot(q0')
+uiwait(f)
 
 
 %% Stage 2: Determine Symbolic EOM
@@ -137,9 +146,11 @@ dq_sym = sym('dq', [1 DOF]);
 assume(q_sym,  'real')
 assume(dq_sym, 'real')
 
+
 if mode > 0
+    x_d = sym(x_d);
     syms t
-    x_d(t) = sym(x_d);
+    x_d(t) = x_d;
     xdd_d = matlabFunction(diff(x_d, 2));
     xd_d = matlabFunction(diff(x_d));
     x_d = matlabFunction(x_d);
@@ -219,7 +230,7 @@ if mode == 0
 
 
 
-% Compliance ----------------------------------
+% COMPLIANCE ----------------------------------
 elseif mode == 1 % 
 
     disp("Simulating compliance control")
@@ -309,78 +320,77 @@ elseif mode == 2
 end
 
 
-%% Stage 4: Plot results
+%% Stage 4 Plotting
 
+if mode > 0
 
+    if isa(out.x_e_out, 'timeseries')
+        t    = out.x_e_out.Time;
+        x_e  = squeeze(out.x_e_out.Data)';       % T × 6
+        h_e  = squeeze(out.h_e_out.Data)';       % T × 6
+        x_d  = squeeze(out.x_d_out.Data)';       % T × 6
+    else
+        % Logged as 'Array' format: rows = time, columns = signals
+        t    = out.tout;
+        x_e  = squeeze(out.x_e_out);
+        h_e  = squeeze(out.h_e_out);
+    end
+     
+    if size(x_d) ~= size(x_e)
+        x_d = repmat(x_d', length(t), 1);
+    end
+    
+    if size(h_e) ~= size(x_e)
+        h_e = repmat(h_e', length(t), 1);
+    end
+    
+    % ── Figure 1: Desired vs Actual End-Effector POSITION ───────────────────
+     
+    labels_pos = {'p_x (m)', 'p_y (m)', 'p_z (m)'};
+    labels_ori = {'roll (rad)', 'pitch (rad)', 'yaw (rad)'};
+     
+    figure('Name', 'End-Effector Position: Desired vs Actual', ...
+           'NumberTitle', 'off', 'Color', 'w');
+     
+    for i = 1:3
+        subplot(3, 1, i);
+        hold on; grid on;
+        plot(t, x_d(:, i), 'b--', 'LineWidth', 1.8, 'DisplayName', 'Desired x_d');
+        plot(t, x_e(:, i), 'r-',  'LineWidth', 1.5, 'DisplayName', 'Actual  x_e');
+        xlabel('Time (s)');
+        ylabel(labels_pos{i});
+        legend('Location', 'best');
+        title(labels_pos{i});
+     
+        % % Annotate steady-state error (last 10% of simulation)
+        % i_ss = round(0.9 * length(t));
+        % err_ss = mean(x_d(i_ss:end, i) - x_e(i_ss:end, i));
+        % text(t(i_ss), x_e(i_ss, i), ...
+        %      sprintf('  SS error = %.4f', err_ss), ...
+        %      'FontSize', 8, 'Color', [0.5 0 0]);
+    end
+    sgtitle('Compliance Control — Desired vs Actual End-Effector Position', ...
+            'FontWeight', 'bold');
+     
+    % ── Figure 2: End-Effector Contact Forces ────────────────────────────────
+     
+    force_labels  = {'f_x (N)', 'f_y (N)', 'f_z (N)'};
+    moment_labels = {'m_x (N·m)', 'm_y (N·m)', 'm_z (N·m)'};
+     
+    figure('Name', 'End-Effector Contact Forces', ...
+           'NumberTitle', 'off', 'Color', 'w');
+     
+    for i = 1:3
+        subplot(3, 1, i);
+        hold on; grid on;
+        plot(t, h_e(:, i),   'r-',  'LineWidth', 1.5, 'DisplayName', force_labels{i});
+        % yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
+        xlabel('Time (s)');
+        ylabel(force_labels{i});
+        legend('Location', 'best');
+        title(force_labels{i});
+    end
+    sgtitle('Compliance Control — End-Effector Contact Forces h_e', ...
+            'FontWeight', 'bold');
 
-%% Stage 4 Plotting 
-
-if isa(out.x_e_out, 'timeseries')
-    t    = out.x_e_out.Time;
-    x_e  = squeeze(out.x_e_out.Data)';       % T × 6
-    h_e  = squeeze(out.h_e_out.Data)';       % T × 6
-    x_d  = squeeze(out.x_d_out.Data)';       % T × 6
-else
-    % Logged as 'Array' format: rows = time, columns = signals
-    t    = out.tout;
-    x_e  = squeeze(out.x_e_out);
-    h_e  = squeeze(out.h_e_out);
 end
- 
-if size(x_d) ~= size(x_e)
-    x_d = repmat(x_d', length(t), 1);
-end
-
-if size(h_e) ~= size(x_e)
-    h_e = repmat(h_e', length(t), 1);
-end
-
-% ── Figure 1: Desired vs Actual End-Effector POSITION ───────────────────
- 
-labels_pos = {'p_x (m)', 'p_y (m)', 'p_z (m)'};
-labels_ori = {'roll (rad)', 'pitch (rad)', 'yaw (rad)'};
- 
-figure('Name', 'End-Effector Position: Desired vs Actual', ...
-       'NumberTitle', 'off', 'Color', 'w');
- 
-for i = 1:3
-    subplot(3, 1, i);
-    hold on; grid on;
-    plot(t, x_d(:, i), 'b--', 'LineWidth', 1.8, 'DisplayName', 'Desired x_d');
-    plot(t, x_e(:, i), 'r-',  'LineWidth', 1.5, 'DisplayName', 'Actual  x_e');
-    xlabel('Time (s)');
-    ylabel(labels_pos{i});
-    legend('Location', 'best');
-    title(labels_pos{i});
- 
-    % % Annotate steady-state error (last 10% of simulation)
-    % i_ss = round(0.9 * length(t));
-    % err_ss = mean(x_d(i_ss:end, i) - x_e(i_ss:end, i));
-    % text(t(i_ss), x_e(i_ss, i), ...
-    %      sprintf('  SS error = %.4f', err_ss), ...
-    %      'FontSize', 8, 'Color', [0.5 0 0]);
-end
-sgtitle('Compliance Control — Desired vs Actual End-Effector Position', ...
-        'FontWeight', 'bold');
- 
-% ── Figure 2: End-Effector Contact Forces ────────────────────────────────
- 
-force_labels  = {'f_x (N)', 'f_y (N)', 'f_z (N)'};
-moment_labels = {'m_x (N·m)', 'm_y (N·m)', 'm_z (N·m)'};
- 
-figure('Name', 'End-Effector Contact Forces', ...
-       'NumberTitle', 'off', 'Color', 'w');
- 
-for i = 1:3
-    subplot(3, 1, i);
-    hold on; grid on;
-    plot(t, h_e(:, i),   'r-',  'LineWidth', 1.5, 'DisplayName', force_labels{i});
-    % yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
-    xlabel('Time (s)');
-    ylabel(force_labels{i});
-    legend('Location', 'best');
-    title(force_labels{i});
-end
-sgtitle('Compliance Control — End-Effector Contact Forces h_e', ...
-        'FontWeight', 'bold');
-
