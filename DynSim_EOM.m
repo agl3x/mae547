@@ -25,6 +25,7 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
     B_sym = EOM.B;
     C_sym = EOM.c;
     G_sym = EOM.G;
+    F_sym = EOM.F;
 
     param_fields = fieldnames(params);
     for i = 1:numel(param_fields)
@@ -34,6 +35,7 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
         B_sym = subs(B_sym, psym, pval);
         C_sym = subs(C_sym, psym, pval);
         G_sym = subs(G_sym, psym, pval);
+        F_sym = subs(F_sym, psym, pval);
     end
 
 
@@ -44,6 +46,7 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
     B_func = matlabFunction(B_sym, 'Vars', {sv});
     C_func = matlabFunction(C_sym, 'Vars', {sv});
     G_func = matlabFunction(G_sym, 'Vars', {sv});
+    F_func = matlabFunction(F_sym, 'Vars', {sv});
 
     %%  ODE right-hand side  (state-space form)
     function dxdt = odefun(t, x)
@@ -51,14 +54,34 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
         qd_n = x(n+1:end);
 
         tau_n = u(t, q_n, qd_n);
-        tau_n = tau_n(:);                   % ensure column vector
+        tau_n = reshape(tau_n, [], 1);      % ensure column vector
 
         B_n = double(B_func(x));            % [n x n]
         C_n = double(C_func(x));            % [n x n]
         G_n = double(G_func(x));            % [n x 1]
+        F_n = double(F_func(x));
 
         % Forward dynamics: qdd = B \ (tau - C*qd - G)
-        qdd_n = B_n \ (tau_n - C_n * qd_n - G_n);
+
+        
+        disp("B_n")
+        disp(size(tau_n))
+
+        disp("tau_n")
+        disp(size(tau_n))
+
+        disp("C_n")
+        disp(size(C_n))
+
+        disp("qd_n")
+        disp(size(qd_n))
+
+        disp("G_n")
+        disp(size(G_n))
+
+        disp("F_n")
+        disp(size(F_n))
+        qdd_n = B_n \ (tau_n - C_n * qd_n - G_n - F_n);
 
         dxdt = [qd_n; qdd_n];
     end
@@ -84,8 +107,9 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
         B_k   = double(B_func(xk));
         C_k   = double(C_func(xk));
         G_k   = double(G_func(xk));
+        F_k   = double(G_func(xk));
 
-        qdd_out(k, :) = (B_k \ (tau_k - C_k * qd_out(k,:).' - G_k)).';
+        qdd_out(k, :) = (B_k \ (tau_k - C_k * qd_out(k,:).' - G_k - F_k)).';
     end
 
     %% ------------------------------------------------------------------ %%

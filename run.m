@@ -17,6 +17,10 @@ if testmode
     params.I_l = [0.01 0.01 0.01];
     params.I_m = [0.001 0.001 0.001];
     params.k_r = [10 10 10];
+
+    x_d  = @(t) [0.10*t; 0.20; 0.30; 0; 0; 0];
+    xd_d  = @(t) [.1; 0; 0; 0; 0; 0];
+    xdd_d = @(t) [0; 0; 0; 0; 0; 0];
 else
     input_ui = MAE547_Final_Project_App();
     disp(input_ui)
@@ -107,30 +111,30 @@ end
 
 %% get equations of motion
 
-disp("Calculating equations of motion")
-[EOM2] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0, joint_types);
-
-
-q = EOM2.Q.q;
-dq = EOM2.Q.qd;
-qdq = [q;dq];
-
-B(q) = EOM2.B;
-C(qdq) = EOM2.c;
-G(q) = EOM2.G;
-
-disp("B(q):")
-disp(B)
-
-disp("C(q, dq):")
-disp(C)
-
-disp("G(q):")
-disp(G)
-
-B = matlabFunction(B);
-C = matlabFunction(C);
-G = matlabFunction(G);
+% disp("Calculating equations of motion")
+% [EOM2] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0, joint_types);
+% 
+% 
+% q = EOM2.Q.q;
+% dq = EOM2.Q.qd;
+% qdq = [q;dq];
+% 
+% B(q) = EOM2.B;
+% C(qdq) = EOM2.c;
+% G(q) = EOM2.G;
+% 
+% disp("B(q):")
+% disp(B)
+% 
+% disp("C(q, dq):")
+% disp(C)
+% 
+% disp("G(q):")
+% disp(G)
+% 
+% B = matlabFunction(B);
+% C = matlabFunction(C);
+% G = matlabFunction(G);
 
 %% simulink test
 
@@ -138,23 +142,26 @@ t_i = 0;
 t_f = 10;
 
 
-dimensions = 4;
-X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
-dX_d = diff(X_d);
-d2X_d = diff(X_d, 2);
 
+% dimensions = 4;
+% X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
+% dX_d = diff(X_d);
+% d2X_d = diff(X_d, 2);
+% 
+% 
+% X_d = matlabFunction(X_d);
+% dX_d = matlabFunction(dX_d);
+% d2X_d = matlabFunction(d2X_d);
 
-X_d = matlabFunction(X_d);
-dX_d = matlabFunction(dX_d);
-d2X_d = matlabFunction(d2X_d);
-
-disp("Starting simulink...")
-sim("inversedynamicstest.slx");
+% disp("Starting simulink...")
+% sim("inversedynamicstest.slx");
 
 %% Bridge to impedance model
-n_dof = N;
-
 DH = double(dh_raw);
+a = dh_raw(:,1);
+alpha = dh_raw(:,2);
+d = dh_raw(:,3);
+theta = dh_raw(:,4);
 
 mass = params.m_l(:); 
 
@@ -182,9 +189,13 @@ R_d = eye(3);
 q0     = zeros(N, 1);
 qdot_0 = zeros(N, 1);
 dt    = 0.001;
-T_sim = t_f;
+T = t_f;
 
 % Assignment from workspace to simulink constants
+assignin('base', 'a',       a);
+assignin('base', 'd',       d);
+assignin('base', 'alpha',   alpha);
+assignin('base', 'theta',   theta);
 assignin('base', 'DH',      DH);
 assignin('base', 'mass',    mass);
 assignin('base', 'com',     com);
@@ -197,19 +208,45 @@ assignin('base', 'R_d',     R_d);
 assignin('base', 'q0',      q0);
 assignin('base', 'q_dot0',  qdot_0);
 assignin('base', 'dt',      dt);
-assignin('base', 'T_sim',   T_sim);
-assignin('base', 'n_dof',   n_dof);
 
 open_system("impedanceSimulink.slx")
 set_param("impedanceSimulink", "SimulationMode", "normal")
 disp("Starting impedance control simulation...")
-sim("impedanceSimulink.slx");
+Impedance_out = sim("impedanceSimulink.slx");
 
 
+%% Exporting xe and xd
 
+t_log = Impedance_out.tout;
 
+try
+    x_d = Impedance_out.x_d_log;
+catch
+    try
+        x_d = logsout.getElement('x_d_log').Values.Data;
+    catch
+        error("x_d_log not found. Check your To Workspace block name.")
+    end
+end
 
+try
+    x_e = Impedance_out.x_e_log;
+catch
+    try
+        x_e = logsout.getElement('x_e_log').Values.Data;
+    catch
+        error("x_e_log not found. Check your To Workspace block name.")
+    end
+end
 
+% % ── Handle array dimensions ───────────────────────────────────────────
+% % Simulink To Workspace outputs [timesteps x signal_dim]
+% % If it comes out transposed, fix it:
+% if size(x_d, 1) ~= length(t_log)
+%     x_d = x_d';
+% end
+% if size(x_e, 1) ~= length(t_log)
+%     x_e = x_e';
+% end
 
-
-
+n_dims = size(x_d, 2);   % number of DOF / task-space dims

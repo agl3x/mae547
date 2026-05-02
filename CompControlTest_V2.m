@@ -1,3 +1,4 @@
+%% CompControlTest_V2
 clear; clc; close all;
 
 %% ── Robot definition ────────────────────────────────────────────────────
@@ -58,8 +59,8 @@ if testmode
     % EE position at q0 via forward kinematics:
     %   p_x = (L1+L2+L3)*cos(q1)*cos(q2+q3) ... (approx, exact from FK)
     % Set desired to a nearby reachable point:
-    x_d  = [0.40; 0.20; 0.30; 0; 0; 0];  % desired pose [pos(m); rpy(rad)]
-    xd_d = zeros(6, 1);                   % regulation task (stationary)
+    %x_d  = [0.40; 0.20; 0.30; 0; 0; 0];  % desired pose [pos(m); rpy(rad)]
+    %xd_d = zeros(6, 1);                   % regulation task (stationary)
 
     % Step contact force: 8 N push in -X direction, turns on at t = 2 s
     % Implemented in Simulink as: h_e_mag * (t >= t_step)
@@ -70,6 +71,9 @@ if testmode
     % NOTE: wire h_e in Simulink as a Step block:
     %   Initial value = [0;0;0;0;0;0], Final value = h_e, Step time = t_step_he
     % OR use the constant h_e above for a constant-force test.
+
+    x_d = @(t) [cos(t); sin(t); .1*t; 0; 0; 0];
+    xd_d = @(t) [-sin(t); cos(t); .1; 0;0;0];
 
 else
     input_ui = MAE547_Final_Project_App();
@@ -118,30 +122,30 @@ I_l = params.I_l(:);
 I_m = params.I_m(:);
 k_r = params.k_r(:);
 
-%% ── Symbolic EOM (for display and report) ────────────────────────────────
-
-q_sym  = sym('q',  [1 N]);
-dq_sym = sym('dq', [1 N]);
-assume(q_sym,  'real')
-assume(dq_sym, 'real')
-
-dh_sym = sym(dh_raw);
-for i = 1:N
-    if joint_types(i) == "R"
-        dh_sym(i,4) = dh_sym(i,4) + q_sym(i);
-    else
-        dh_sym(i,3) = dh_sym(i,3) + q_sym(i);
-    end
-end
-
-disp("Calculating symbolic equations of motion...")
-[EOM2] = EOM(dh_sym, sym(params.m_l), sym(params.m_m), ...
-              sym(params.I_l), sym(params.I_m), sym(params.k_r), ...
-              g0, joint_types);
-
-disp("B(q):"),    disp(EOM2.B)
-disp("C(q,dq):"), disp(EOM2.c)
-disp("G(q):"),    disp(EOM2.G)
+% %% ── Symbolic EOM (for display and report) ────────────────────────────────
+% 
+% q_sym  = sym('q',  [1 N]);
+% dq_sym = sym('dq', [1 N]);
+% assume(q_sym,  'real')
+% assume(dq_sym, 'real')
+% 
+% dh_sym = sym(dh_raw);
+% for i = 1:N
+%     if joint_types(i) == "R"
+%         dh_sym(i,4) = dh_sym(i,4) + q_sym(i);
+%     else
+%         dh_sym(i,3) = dh_sym(i,3) + q_sym(i);
+%     end
+% end
+% 
+% disp("Calculating symbolic equations of motion...")
+% [EOM2] = EOM(dh_sym, sym(params.m_l), sym(params.m_m), ...
+%               sym(params.I_l), sym(params.I_m), sym(params.k_r), ...
+%               g0, joint_types);
+% 
+% disp("B(q):"),    disp(EOM2.B)
+% disp("C(q,dq):"), disp(EOM2.c)
+% disp("G(q):"),    disp(EOM2.G)
 
 %% ── Compliance control gains ─────────────────────────────────────────────
 %
@@ -257,7 +261,7 @@ for i = 1:3
     subplot(3, 1, i);
     hold on; grid on;
     plot(t, h_e(:, i),   'r-',  'LineWidth', 1.5, 'DisplayName', force_labels{i});
-    yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
+    % yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
     xlabel('Time (s)');
     ylabel(force_labels{i});
     legend('Location', 'best');

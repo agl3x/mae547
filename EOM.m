@@ -1,4 +1,4 @@
-function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type) 
+function [EOM] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s) 
     % Find jacobians & Equations of motion for a robotic arm
     % dh - Denavit-Hartenberg table - order (a, alpha, d, theta) [n x4]
     % mL - mass of each link [1xn]
@@ -6,9 +6,19 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
     % kr - motor ratio
     % Joint_type "P"-Prismatic, "R" Revolute
     % g0 [x y z] , input direction of gravity
+    % Fv - Viscous Friction
+    % Fs - Static (coulumb) friction
 
 
     n = size(dh,1); % # of joints
+
+    EOM.params.m_l = m_l;
+    EOM.params.m_m = m_m;
+    EOM.params.I_l = I_l;
+    EOM.params.I_m = I_m;
+    EOM.params.k_r = k_r;
+    EOM.params.F_v = F_v;
+    EOM.params.F_s = F_s;
     
     B = sym(zeros(n));
     c = sym(zeros(n));
@@ -74,7 +84,7 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
 
             %% Motor Angle Jacobian
             if j == i
-                JoM(:,j,i) = kr(i)*z_mi; %kr * z_mi
+                JoM(:,j,i) = k_r(i)*z_mi; %kr * z_mi
             else
                 JoM(:,j,i) = JoL(:,j,i);
             end
@@ -126,8 +136,8 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
         Jpm_i = JpM(:, :, i);   
         Jom_i = JoM(:, :, i); 
 
-        B = B + mL(i)*(Jp_i.'*Jp_i) + Jo_i.'*R_0i*IL(i)*R_0i.'*Jo_i ...
-              + mm(i)*(Jpm_i.'*Jpm_i) + Jom_i.'*R_0mi*Im(i)*R_0mi.'*Jom_i;
+        B = B + m_l(i)*(Jp_i.'*Jp_i) + Jo_i.'*R_0i*I_l(i)*R_0i.'*Jo_i ...
+              + m_m(i)*(Jpm_i.'*Jpm_i) + Jom_i.'*R_0mi*I_m(i)*R_0mi.'*Jom_i;
        
     end
 
@@ -178,18 +188,24 @@ function [EOM] = EOM(dh,mL,mm,IL,Im,kr,g0,Joint_type)
     g_vec = g0(:); % ensure column vector [3x1]
     G = sym(zeros(n,1));
     for i = 1:n
-        G = G + mL(i) * (g_vec.' * JpL(:,:,i)).' ...
-              + mm(i) * (g_vec.' * JpM(:,:,i)).';
+        G = G + m_l(i) * (g_vec.' * JpL(:,:,i)).' ...
+              + m_m(i) * (g_vec.' * JpM(:,:,i)).';
     end
 
     EOM.G = -simplify(G);
 
+    F = sym(zeros(n,1));
+    k_tanh = 100; % sharpness of tanh approximation to sign()
+    for i = 1:n
+        F(i) = F_v(i) * qd(i) + F_s(i) * tanh(k_tanh * qd(i));
+    end
 
+    EOM.F = simplify(F);
 
     %% Combine Matricies into EOM
     EOM.tau = sym('tau', [n 1]);
 
-    EOM.tau = simplify(B*qdd + c*qd + G);
+    EOM.tau = simplify(B*qdd + c*qd + G + F);
 end
 
 
