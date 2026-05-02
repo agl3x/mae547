@@ -19,10 +19,10 @@ if ~testing
 
     % launch gui window
     input_ui = RoboticSim();
-    disp(input_ui)
     
     waitfor(input_ui, 'solving', 1)
 
+    mode = input_ui.menu - 1;
     example = input_ui.solvingExample;
 
     if ~example
@@ -30,9 +30,9 @@ if ~testing
     
         % robot properties
         a     = input_ui.aValues;
-        alpha = input_ui.alphaValues;
+        alpha = deg2rad(input_ui.alphaValues);
         d     = input_ui.dValues;
-        theta = input_ui.thetaValues;
+        theta = deg2rad(input_ui.thetaValues);
         rp    = input_ui.rpValues;
     
         dh_raw = [a',alpha',d',theta'];
@@ -47,32 +47,35 @@ if ~testing
         F_s = input_ui.sfValues;
         F_v = input_ui.vfValues;
         
-        
         % scenario properties
     
         g0 = input_ui.gValues;
-        h_e = input_ui.heValues;
-    
         q0 = input_ui.icValues;
         q0 = q0';
-        qd0 = input_ui.icDotValues;
-        qd0 = qd0';
-    
-        x_d = input_ui.xdEquations;
-        x_d = str2sym(x_d);
-       
-    
+        dq0 = input_ui.icDotValues;
+        dq0 = dq0';
         t_stop = input_ui.tValues;
-    
+
         % controller properties
-    
-        mode = input_ui.menu - 1;
-    
-        kpkmd = input_ui.kpkmdValues;
-        
-        K_p = kpkmd(1);
-        K_d = kpkmd(2);
-        M_d = kpkmd(3);
+
+        syms t
+
+        if mode > 0
+            h_e = input_ui.heValues;
+            x_d = str2sym(string(input_ui.xdEquations));
+            x_d(t) = x_d;
+            x_d = matlabFunction(x_d);
+
+            kpkmd = input_ui.kpkmdValues;
+            K_p = kpkmd(1);
+            K_d = kpkmd(2);
+            M_d = kpkmd(3);
+        else
+            u = str2sym(string(input_ui.dEquations));
+            u(t) = u;
+            u = matlabFunction(u, vars = ['robot', t, 'q', 'qd']);
+        end
+             
     end
     
     delete(input_ui)
@@ -83,22 +86,23 @@ if testing || example
 
     % robot properties
 
-    a2 = 0.7;
-    a3 = 0.7;
-    a4 = 0.7;
+    a2 = 0.75;
+    a3 = 0.75;
+    a4 = 0.75;
 
     dh_raw = [0,    pi/2,   0,   0;   
               a2,      0,   0,   0;
+              0,    pi/2,   0,   0;
               a4,      0,   0,   0];
 
-    joint_types = ["R"; "R"; "R"];
+    joint_types = ["R"; "R"; "R"; "R"];
     DOF = length(joint_types);
 
     m_l = ones(1, DOF) * 2;       % link masses        [kg]
     m_m = ones(1, DOF) * 0.3;       % motor masses       [kg]
     I_l = ones(1, DOF) * 0.03;      % link inertias      [kg·m²]
     I_m = ones(1, DOF) * 0.001;     % motor inertias     [kg·m²]
-    k_r = ones(1, DOF) * 50;      % gear ratios (high torque)
+    k_r = ones(1, DOF) * 600;      % gear ratios (high torque)
     F_s = ones(1, DOF) * 0;      % static friction
     F_v = ones(1, DOF) * 0;      % viscous friction
     
@@ -107,41 +111,53 @@ if testing || example
     q0  = ones(DOF, 1) * pi/6;
     dq0 = zeros(DOF, 1);
 
-    x_d  = @(t) [0.10*t; 0.20*t; 0.30*t; 0; 0; 0];
+    x_d  = @(t) [0.4; 0.5*cos(0.01*t); 0.7*sin(0.01*t); 0; 0; 0];
     
-    t_stop = 10;
+    t_stop = 1000;
     
     h_e = [-8; 0; 0; 0; 0; 0];
-    u = @(robot, t, q, qd) [-8, 0, 0];
+    u = @(robot, t, q, qd) [-8, 0, 0, 0];
 
     % controller properties
 
-    K_p = 400;
-    K_d = 40;
-    M_d = 10;
+    K_p = 10;
+    K_d = 100;
+    M_d = 1;
    
 
 end
+
+disp("--------------------------------------------")
+if mode == 0
+    disp("Selected Mode: Dynamics")
+elseif mode == 1
+    disp("Selected Mode: Compliance")
+elseif mode == 2
+    disp("Selected Mode: Impedance")
+end
+disp("--------------------------------------------")
+
 
 %% Stage 1.5: Build Robot Toolbox Model for Visualization
 
 for i=1:DOF
     if joint_types(i) == "R"
-        Links(i) = Revolute;
+        Links(i) = Revolute();
     elseif joint_types(i) == "P"
-        Links(i) = Prismatic;
+        Links(i) = Prismatic();
     end
 
     Links(i).a     = dh_raw(i, 1);
     Links(i).alpha = dh_raw(i, 2);
     Links(i).d     = dh_raw(i, 3);
-    Links(i).theta = dh_raw(i, 4);    
+    Links(i).theta = dh_raw(i, 4);  
+
     Links(i).m  = m_l(i);
     Links(i).I  = [0, 0, I_l(i), 0, 0, 0];
     Links(i).Jm = I_m(i);
     Links(i).G  = k_r(i);
     Links(i).B  = F_v(i);
-    Links(i).Tc = F_s(i);
+    Links(i).Tc = [F_s(i), -F_s(i)];
 end
 
 robot = SerialLink(Links, 'name', 'robot');
@@ -153,12 +169,6 @@ uiwait(f)
 
 %% Stage 2: Determine Symbolic EOM
 
-q_sym  = sym('q',  [1 DOF]);
-dq_sym = sym('dq', [1 DOF]);
-assume(q_sym,  'real')
-assume(dq_sym, 'real')
-
-
 if mode > 0
     x_d = sym(x_d);
     syms t
@@ -168,30 +178,24 @@ if mode > 0
     x_d = matlabFunction(x_d);
 end
 
-dh_sym = sym(dh_raw);
-for i = 1:DOF
-    if joint_types(i) == "R"
-        dh_sym(i,4) = dh_sym(i,4) + q_sym(i);
-    else
-        dh_sym(i,3) = dh_sym(i,3) + q_sym(i);
-    end
-end
-
 
 disp("Calculating symbolic equations of motion...")
-[EOM1] = EOM(dh_sym, m_l, m_m, ...
+
+[EOM1] = EOM(dh_raw, m_l, m_m, ...
               I_l, I_m, k_r, ...
               g0, joint_types, F_v, F_s);
 
 disp("B(q):")
-disp(EOM1.B)
+disp(vpa(EOM1.B, 4))
 
-disp("c(q,dq):")
-disp(EOM1.c)
+disp("C(q,dq):")
+disp(vpa(EOM1.c, 4))
 
 disp("G(q):")
-disp(EOM1.G)
+disp(vpa(EOM1.G, 4))
 
+disp("tau(q, dq):")
+disp(vpa(EOM1.tau, 4))
 
 
 %% Stage 3: Run simulation with chosen dyanamic model
@@ -201,6 +205,13 @@ if mode == 0
     disp("Simulating forward dynamics")
 
     [T,Q,DQ] = robot.fdyn(t_stop, u, q0, dq0);
+
+    for i=1:length(T)
+        U(i,:) = u(robot, T(i), Q(i), DQ(i));
+    end
+
+    D2Q = robot.accel(Q, DQ, U);
+
     
     figure('Name', 'Robotic Arm Dynamics', 'NumberTitle', 'off', ...
            'Position', [100 100 900 700]);
@@ -209,7 +220,7 @@ if mode == 0
     joint_labels = arrayfun(@(i) sprintf('Joint %d', i), 1:DOF, 'UniformOutput', false);
 
     % ---- q ----
-    subplot(2, 1, 1);
+    subplot(3, 1, 1);
     plot(T, Q, 'LineWidth', 1.8);
     xlabel('Time (s)');
     ylabel('$q$', 'Interpreter', 'latex', 'FontSize', 12);
@@ -218,7 +229,7 @@ if mode == 0
     grid on;  box on;
 
     % ---- qd ----
-    subplot(2, 1, 2);
+    subplot(3, 1, 2);
     plot(T, DQ, 'LineWidth', 1.8);
     xlabel('Time (s)');
     ylabel('$\dot{q}$', 'Interpreter', 'latex', 'FontSize', 12);
@@ -227,15 +238,15 @@ if mode == 0
     grid on;  box on;
 
     % ---- qdd ----
-    % subplot(3, 1, 3);
-    % plot(t_out, qdd_out, 'LineWidth', 1.8);
-    % xlabel('Time (s)');
-    % ylabel('$\ddot{q}$', 'Interpreter', 'latex', 'FontSize', 12);
-    % title('Joint Acceleration', 'Interpreter', 'latex', 'FontSize', 13);
-    % legend(joint_labels, 'Location', 'best');
-    % grid on;  box on;
-    % 
-    % sgtitle('Robotic Arm Dynamics Simulation', 'FontSize', 14, 'FontWeight', 'bold');
+    subplot(3, 1, 3);
+    plot(T, D2Q, 'LineWidth', 1.8);
+    xlabel('Time (s)');
+    ylabel('$\ddot{q}$', 'Interpreter', 'latex', 'FontSize', 12);
+    title('Joint Acceleration', 'Interpreter', 'latex', 'FontSize', 13);
+    legend(joint_labels, 'Location', 'best');
+    grid on;  box on;
+
+    sgtitle('Robotic Arm Dynamics Simulation', 'FontSize', 14, 'FontWeight', 'bold');
 
     figure;
     robot.plot(Q)
@@ -347,6 +358,8 @@ if mode > 0
         x_e  = squeeze(out.x_e_out);
         h_e  = squeeze(out.h_e_out);
     end
+
+    q_out = squeeze(out.q_out)';
      
     if size(x_d) ~= size(x_e)
         x_d = repmat(x_d', length(t), 1);
@@ -374,15 +387,15 @@ if mode > 0
         legend('Location', 'best');
         title(labels_pos{i});
      
-        % % Annotate steady-state error (last 10% of simulation)
-        % i_ss = round(0.9 * length(t));
-        % err_ss = mean(x_d(i_ss:end, i) - x_e(i_ss:end, i));
-        % text(t(i_ss), x_e(i_ss, i), ...
-        %      sprintf('  SS error = %.4f', err_ss), ...
-        %      'FontSize', 8, 'Color', [0.5 0 0]);
     end
-    sgtitle('Compliance Control — Desired vs Actual End-Effector Position', ...
+
+    if mode == 1
+        sgtitle('Compliance Control — Desired vs Actual End-Effector Position', ...
             'FontWeight', 'bold');
+    else
+        sgtitle('Impedance Control — Desired vs Actual End-Effector Position', ...
+            'FontWeight', 'bold');
+    end
      
     % ── Figure 2: End-Effector Contact Forces ────────────────────────────────
      
@@ -396,13 +409,21 @@ if mode > 0
         subplot(3, 1, i);
         hold on; grid on;
         plot(t, h_e(:, i),   'r-',  'LineWidth', 1.5, 'DisplayName', force_labels{i});
-        % yline(h_e(end, i), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Steady state');
         xlabel('Time (s)');
         ylabel(force_labels{i});
         legend('Location', 'best');
         title(force_labels{i});
     end
-    sgtitle('Compliance Control — End-Effector Contact Forces h_e', ...
-            'FontWeight', 'bold');
 
+    if mode == 1
+        sgtitle('Compliance Control — End-Effector Contact Forces h_e', ...
+            'FontWeight', 'bold');
+    else
+        sgtitle('Impedance Control — End-Effector Contact Forces h_e', ...
+            'FontWeight', 'bold');
+    end
+
+    figure;
+    robot.plot(q_out)
+    
 end

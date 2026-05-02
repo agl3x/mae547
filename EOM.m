@@ -1,4 +1,4 @@
-function [EOM] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s) 
+function [EOM] = EOM(dh_raw,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s) 
     % Find jacobians & Equations of motion for a robotic arm
     % dh - Denavit-Hartenberg table - order (a, alpha, d, theta) [n x4]
     % mL - mass of each link [1xn]
@@ -10,7 +10,26 @@ function [EOM] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s)
     % Fs - Static (coulumb) friction
 
 
-    n = size(dh,1); % # of joints
+    n = size(dh_raw,1); % # of joints
+
+    DOF = length(Joint_type);
+    q = sym('q', [DOF 1]);
+    qd = sym('qd',[DOF 1]);
+    qdd = sym('qdd',[DOF 1]);
+
+    assume(q,  'real')
+    assume(qd, 'real')
+    assume(qdd, 'real')
+
+    dh = sym(dh_raw);
+
+    for i = 1:DOF
+        if Joint_type(i) == "R"
+            dh(i,4) = dh(i,4) + q(i);
+        else
+            dh(i,3) = dh(i,3) + q(i);
+        end
+    end
 
     EOM.params.m_l = m_l;
     EOM.params.m_m = m_m;
@@ -35,6 +54,9 @@ function [EOM] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s)
             T0i(:,:,i) = T0i(:,:,i-1)* T(:,:,i);
         end
     end
+
+    disp("DH Table: ")
+    disp(dh)
 
 
 
@@ -143,25 +165,6 @@ function [EOM] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0,Joint_type, F_v, F_s)
 
     EOM.B = simplify(B);
 
-    %% identify q
-    % Make base q vector for each joint
-    q   = sym('q',   [n 1]);
-    for i = 1:n
-        if Joint_type(i) == 'R'
-            q(i) = dh(i,4);
-        else
-            q(i) = dh(i,3);
-        end
-    end
-
-    % Make derivative qd & qdd for each variable type
-    qd  = sym(zeros(n,1));
-    qdd = sym(zeros(n,1));
-    for i = 1:n
-        varname = char(q(i));           % e.g. 't1'
-        qd(i)  = sym([varname, 'd']);   % e.g. 't1d'
-        qdd(i) = sym([varname, 'dd']);  % e.g. 't1dd'
-    end
 
     EOM.Q.q = q;
     EOM.Q.qd = qd;
