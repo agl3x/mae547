@@ -6,7 +6,7 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 1;
+mode = 0;
 testing = false;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
