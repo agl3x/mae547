@@ -252,8 +252,3 @@ end
 % end
 
 n_dims = size(x_d, 2);   % number of DOF / task-space dims
-
-
-
-
-
