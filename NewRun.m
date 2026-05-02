@@ -41,8 +41,9 @@ if testing
     q0  = [pi/4; pi/4; -pi/4];
     dq0 = [0; 0; 0];
 
-    x_d  = [0.40; 0.20; 0.30; 0; 0; 0];
-    xd_d = zeros(6, 1);
+    x_d  = @(t) [0.40; 0.20; 0.30; 0; 0; 0];
+    t_stop = 10;
+    % xd_d = zeros(6, 1);
     
     h_e = [-8; 0; 0; 0; 0; 0];
 
@@ -56,7 +57,7 @@ if testing
 else
 
     % launch gui window
-    input_ui = MAE547_Final_Project_App();
+    input_ui = RoboticSim();
     disp(input_ui)
     
     waitfor(input_ui, 'solving', 1)
@@ -80,8 +81,10 @@ else
     k_r = input_ui.krValues;
     F_s = input_ui.sfValues;
     F_v = input_ui.vfValues;
-
+    
     % scenario properties
+
+    t_values = input_ui.tValues;
 
 
     % controller properties
