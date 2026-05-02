@@ -17,6 +17,10 @@ if testmode
     params.I_l = [0.01 0.01 0.01];
     params.I_m = [0.001 0.001 0.001];
     params.k_r = [10 10 10];
+
+    x_d  = @(t) [0.10*t; 0.20; 0.30; 0; 0; 0];
+    xd_d  = @(t) [.1; 0; 0; 0; 0; 0];
+    xdd_d = @(t) [0; 0; 0; 0; 0; 0];
 else
     input_ui = MAE547_Final_Project_App();
     disp(input_ui)
@@ -107,30 +111,30 @@ end
 
 %% get equations of motion
 
-disp("Calculating equations of motion")
-[EOM2] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0, joint_types);
-
-
-q = EOM2.Q.q;
-dq = EOM2.Q.qd;
-qdq = [q;dq];
-
-B(q) = EOM2.B;
-C(qdq) = EOM2.c;
-G(q) = EOM2.G;
-
-disp("B(q):")
-disp(B)
-
-disp("C(q, dq):")
-disp(C)
-
-disp("G(q):")
-disp(G)
-
-B = matlabFunction(B);
-C = matlabFunction(C);
-G = matlabFunction(G);
+% disp("Calculating equations of motion")
+% [EOM2] = EOM(dh,m_l,m_m,I_l,I_m,k_r,g0, joint_types);
+% 
+% 
+% q = EOM2.Q.q;
+% dq = EOM2.Q.qd;
+% qdq = [q;dq];
+% 
+% B(q) = EOM2.B;
+% C(qdq) = EOM2.c;
+% G(q) = EOM2.G;
+% 
+% disp("B(q):")
+% disp(B)
+% 
+% disp("C(q, dq):")
+% disp(C)
+% 
+% disp("G(q):")
+% disp(G)
+% 
+% B = matlabFunction(B);
+% C = matlabFunction(C);
+% G = matlabFunction(G);
 
 %% simulink test
 
@@ -139,18 +143,18 @@ t_f = 10;
 
 
 
-dimensions = 4;
-X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
-dX_d = diff(X_d);
-d2X_d = diff(X_d, 2);
+% dimensions = 4;
+% X_d = SimpleTrajectory(t_i, t_f, 10*rand(dimensions, 1)-5, 10*rand(dimensions, 1)-5, 5);
+% dX_d = diff(X_d);
+% d2X_d = diff(X_d, 2);
+% 
+% 
+% X_d = matlabFunction(X_d);
+% dX_d = matlabFunction(dX_d);
+% d2X_d = matlabFunction(d2X_d);
 
-
-X_d = matlabFunction(X_d);
-dX_d = matlabFunction(dX_d);
-d2X_d = matlabFunction(d2X_d);
-
-disp("Starting simulink...")
-sim("inversedynamicstest.slx");
+% disp("Starting simulink...")
+% sim("inversedynamicstest.slx");
 
 %% Bridge to impedance model
 DH = double(dh_raw);
@@ -204,7 +208,6 @@ assignin('base', 'R_d',     R_d);
 assignin('base', 'q0',      q0);
 assignin('base', 'q_dot0',  qdot_0);
 assignin('base', 'dt',      dt);
-assignin('base', 'xd',      xd);
 
 open_system("impedanceSimulink.slx")
 set_param("impedanceSimulink", "SimulationMode", "normal")
