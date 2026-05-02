@@ -6,7 +6,7 @@ clc; clear; close all;
 % mode 1: compliance control
 % mode 2: impedance control
 
-mode = 1;
+mode = 0;
 testing = true;
 
 g0 = [0, 0, -9.81];    % gravity in -Z direction
@@ -43,15 +43,10 @@ if testing
 
     x_d  = @(t) [0.10*t; 0.20*t; 0.30*t; 0; 0; 0];
     
-    x_d = sym(x_d);
-    xdd_d = matlabFunction(diff(x_d, 2));
-    xd_d = matlabFunction(diff(x_d));
-    x_d = matlabFunction(x_d);
-    
     t_stop = 10;
-    % xd_d = zeros(6, 1);
     
     h_e = [-8; 0; 0; 0; 0; 0];
+    u = @(robot, t, q, qd) [-8, 0, 0];
 
     % controller properties
 
@@ -107,7 +102,7 @@ else
 
 end
 
-%% Stage 1.5: Build Robot Toolbox Model
+%% Stage 1.5: Build Robot Toolbox Model for Visualization
 
 for i=1:DOF
     if joint_types(i) == "R"
@@ -120,16 +115,15 @@ for i=1:DOF
     Links(i).alpha = dh_raw(i, 2);
     Links(i).d     = dh_raw(i, 3);
     Links(i).theta = dh_raw(i, 4);    
- 
-    % Links(i).m  = m_l(i);
-    % Links(i).I  = [0, 0, I_l(i), 0, 0, 0];
-    % Links(i).Jm = I_m(i);
-    % Links(i).G  = k_r(i);
-    % Links(i).B  = F_v(i);
-    % Links(i).Tc = F_s(i);
+    Links(i).m  = m_l(i);
+    Links(i).I  = [0, 0, I_l(i), 0, 0, 0];
+    Links(i).Jm = I_m(i);
+    Links(i).G  = k_r(i);
+    Links(i).B  = F_v(i);
+    Links(i).Tc = F_s(i);
 end
 
-robot = SerialLink(Links, 'name', 'robot', 'configs', {'q0', q0});
+robot = SerialLink(Links, 'name', 'robot');
 
 f = figure;
 robot.plot(q0')
@@ -142,6 +136,14 @@ q_sym  = sym('q',  [1 DOF]);
 dq_sym = sym('dq', [1 DOF]);
 assume(q_sym,  'real')
 assume(dq_sym, 'real')
+
+if mode > 0
+    syms t
+    x_d(t) = sym(x_d);
+    xdd_d = matlabFunction(diff(x_d, 2));
+    xd_d = matlabFunction(diff(x_d));
+    x_d = matlabFunction(x_d);
+end
 
 dh_sym = sym(dh_raw);
 for i = 1:DOF
@@ -168,15 +170,59 @@ disp("G(q):")
 disp(EOM1.G)
 
 
+
 %% Stage 3: Run simulation with chosen dyanamic model
 
 if mode == 0
-    disp("Dyn sim not implemented yet")
+
+    disp("Simulating forward dynamics")
+
+    [T,Q,DQ] = robot.fdyn(t_stop, u, q0, dq0);
+    
+    figure('Name', 'Robotic Arm Dynamics', 'NumberTitle', 'off', ...
+           'Position', [100 100 900 700]);
+
+
+    joint_labels = arrayfun(@(i) sprintf('Joint %d', i), 1:DOF, 'UniformOutput', false);
+
+    % ---- q ----
+    subplot(2, 1, 1);
+    plot(T, Q, 'LineWidth', 1.8);
+    xlabel('Time (s)');
+    ylabel('$q$', 'Interpreter', 'latex', 'FontSize', 12);
+    title('Joint Position', 'Interpreter', 'latex', 'FontSize', 13);
+    legend(joint_labels, 'Location', 'best');
+    grid on;  box on;
+
+    % ---- qd ----
+    subplot(2, 1, 2);
+    plot(T, DQ, 'LineWidth', 1.8);
+    xlabel('Time (s)');
+    ylabel('$\dot{q}$', 'Interpreter', 'latex', 'FontSize', 12);
+    title('Joint Velocity', 'Interpreter', 'latex', 'FontSize', 13);
+    legend(joint_labels, 'Location', 'best');
+    grid on;  box on;
+
+    % ---- qdd ----
+    % subplot(3, 1, 3);
+    % plot(t_out, qdd_out, 'LineWidth', 1.8);
+    % xlabel('Time (s)');
+    % ylabel('$\ddot{q}$', 'Interpreter', 'latex', 'FontSize', 12);
+    % title('Joint Acceleration', 'Interpreter', 'latex', 'FontSize', 13);
+    % legend(joint_labels, 'Location', 'best');
+    % grid on;  box on;
+    % 
+    % sgtitle('Robotic Arm Dynamics Simulation', 'FontSize', 14, 'FontWeight', 'bold');
+
+    figure;
+    robot.plot(Q)
+
+
 
 % Compliance ----------------------------------
 elseif mode == 1 % 
 
-    disp("Solving with compliance control")
+    disp("Simulating compliance control")
 
     dh_base = dh_raw;       % n x 4  [a, alpha, d, theta]  (zeros where q goes)
 
@@ -204,17 +250,10 @@ elseif mode == 1 %
     disp("Done. Run plot_results.m for output plots.")
 
 
-
-
-
-
-
-
-
-
 % IMPEDENCE ------------------------------------
 elseif mode == 2
-    disp("Solving with impedance control")
+
+    disp("Simulating impedance control")
 
     Md = eye(6) * M_d;
     Cd = eye(6) * K_p;

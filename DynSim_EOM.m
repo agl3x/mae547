@@ -54,7 +54,7 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
         qd_n = x(n+1:end);
 
         tau_n = u(t, q_n, qd_n);
-        tau_n = tau_n(:);                   % ensure column vector
+        tau_n = reshape(tau_n, [], 1);      % ensure column vector
 
         B_n = double(B_func(x));            % [n x n]
         C_n = double(C_func(x));            % [n x n]
@@ -62,6 +62,25 @@ function [t_out, q_out, qd_out, qdd_out] = DynSim_EOM(EOM, params, u, q0, qd0, t
         F_n = double(F_func(x));
 
         % Forward dynamics: qdd = B \ (tau - C*qd - G)
+
+        
+        disp("B_n")
+        disp(size(tau_n))
+
+        disp("tau_n")
+        disp(size(tau_n))
+
+        disp("C_n")
+        disp(size(C_n))
+
+        disp("qd_n")
+        disp(size(qd_n))
+
+        disp("G_n")
+        disp(size(G_n))
+
+        disp("F_n")
+        disp(size(F_n))
         qdd_n = B_n \ (tau_n - C_n * qd_n - G_n - F_n);
 
         dxdt = [qd_n; qdd_n];
