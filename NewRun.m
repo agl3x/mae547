@@ -125,9 +125,9 @@ end
 
 robot = SerialLink(Links, 'name', 'robot');
 
-f = figure;
-robot.plot(q0')
-uiwait(f)
+% f = figure;
+% robot.plot(q0')
+% uiwait(f)
 
 
 %% Stage 2: Determine Symbolic EOM

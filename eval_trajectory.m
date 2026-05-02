@@ -9,19 +9,14 @@ function [x_d, xd_d,xdd_d] = eval_trajectory(t)
 %       x_d  = @(t) [...]   6x1 function handle
 %       xd_d = @(t) [...]   6x1 function handle
 
-if mode == 1
-    x_d_fn  = evalin('base', 'x_d');
-    xd_d_fn = evalin('base', 'xd_d');
-    x_d  = x_d_fn(t);    % 6x1
-    xd_d = xd_d_fn(t);   % 6x1
-else
-    x_d_fn  = evalin('base', 'x_d');
-    xd_d_fn = evalin('base', 'xd_d');
-    xdd_d_fn = evalin('base', 'xdd_d');
-    x_d  = x_d_fn(t);    % 6x1
-    xd_d = xd_d_fn(t);   % 6x1
-    xdd_d = xdd_d_fn(t);   % 6x1
-end
+
+x_d_fn  = evalin('base', 'x_d');
+xd_d_fn = evalin('base', 'xd_d');
+xdd_d_fn = evalin('base', 'xdd_d');
+
+x_d  = x_d_fn(t);    % 6x1
+xd_d = xd_d_fn(t);   % 6x1
+xdd_d = xdd_d_fn(t);   % 6x1
 
 end
  
