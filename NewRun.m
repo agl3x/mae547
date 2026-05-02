@@ -187,7 +187,8 @@ disp(EOM1.G)
 if mode == 0
     disp("Dyn sim not implemented yet")
 
-elseif mode == 1 % Compliance
+% Compliance ----------------------------------
+elseif mode == 1 % 
 
     disp("Solving with compliance control")
 
@@ -218,8 +219,67 @@ elseif mode == 1 % Compliance
 
 
 
+
+
+
+
+
+
+
+% IMPEDENCE ------------------------------------
 elseif mode == 2
     disp("Solving with impedance control")
+
+    Md = eye(6) * M_d;
+    Cd = eye(6) * K_p;
+    Kd = eye(6) * K_d;
+
+    q0     = q0;
+    qdot_0 = dq0;
+    dt    = 0.001;
+    T = t_stop;
+
+
+    DH = double(dh_raw);
+    a = dh_raw(:,1);
+    alpha = dh_raw(:,2);
+    d = dh_raw(:,3);
+    theta = dh_raw(:,4);
+    
+    mass = m_l(:); 
+
+    N = length(joint_types);
+    inertia = zeros(N, 3, 3);
+    for i = 1:N
+        inertia(i,:,:) = diag([I_l(i), I_l(i), I_l(i)]);
+    end
+    
+    % Center of mass
+    com = zeros(N, 3);
+    for i = 1:N
+        com(i,1) = dh_raw(i,1) / 2;
+    end
+    
+    % Assignment from workspace to simulink constants
+    assignin('base', 'a',       a);
+    assignin('base', 'd',       d);
+    assignin('base', 'alpha',   alpha);
+    assignin('base', 'theta',   theta);
+    assignin('base', 'DH',      DH);
+    assignin('base', 'mass',    mass);
+    assignin('base', 'com',     com);
+    assignin('base', 'inertia', inertia);
+    assignin('base', 'Md',      Md);
+    assignin('base', 'Cd',      Cd);
+    assignin('base', 'Kd',      Kd);
+    assignin('base', 'q0',      q0);
+    assignin('base', 'q_dot0',  qdot_0);
+    assignin('base', 'dt',      dt);
+    
+    open_system("impedanceSimulink.slx")
+    set_param("impedanceSimulink", "SimulationMode", "normal")
+    disp("Starting impedance control simulation...")
+    out = sim("impedanceSimulink.slx");
 
 end
 
@@ -250,7 +310,7 @@ if size(h_e) ~= size(x_e)
     h_e = repmat(h_e', length(t), 1);
 end
 
-%% ── Figure 1: Desired vs Actual End-Effector POSITION ───────────────────
+% ── Figure 1: Desired vs Actual End-Effector POSITION ───────────────────
  
 labels_pos = {'p_x (m)', 'p_y (m)', 'p_z (m)'};
 labels_ori = {'roll (rad)', 'pitch (rad)', 'yaw (rad)'};
@@ -278,7 +338,7 @@ end
 sgtitle('Compliance Control — Desired vs Actual End-Effector Position', ...
         'FontWeight', 'bold');
  
-%% ── Figure 2: End-Effector Contact Forces ────────────────────────────────
+% ── Figure 2: End-Effector Contact Forces ────────────────────────────────
  
 force_labels  = {'f_x (N)', 'f_y (N)', 'f_z (N)'};
 moment_labels = {'m_x (N·m)', 'm_y (N·m)', 'm_z (N·m)'};
