@@ -42,11 +42,12 @@ if testing
     dq0 = zeros(DOF, 1);
 
     x_d  = @(t) [0.10*t; 0.20*t; 0.30*t; 0; 0; 0];
-    
+
+    syms t
     x_d = sym(x_d);
-    xdd_d = matlabFunction(diff(x_d, 2));
-    xd_d = matlabFunction(diff(x_d));
-    x_d = matlabFunction(x_d);
+    xdd_d = matlabFunction(diff(x_d, 2),'vars',t);
+    xd_d = matlabFunction(diff(x_d),'vars',t);
+    x_d = matlabFunction(x_d,'vars',t);
     
     t_stop = 10;
     % xd_d = zeros(6, 1);
@@ -129,11 +130,11 @@ for i=1:DOF
     % Links(i).Tc = F_s(i);
 end
 
-robot = SerialLink(Links, 'name', 'robot', 'configs', {'q0', q0});
+%robot = SerialLink(Links, 'name', 'robot', 'configs', {'q0', q0});
 
-f = figure;
-robot.plot(q0')
-uiwait(f)
+% f = figure;
+% robot.plot(q0')
+% uiwait(f)
 
 
 %% Stage 2: Determine Symbolic EOM
