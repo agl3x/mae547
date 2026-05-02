@@ -136,6 +136,10 @@ G = matlabFunction(G);
 
 t_i = 0;
 t_f = 10;
+a = 0;
+alpha =0;
+d=0;
+theta=0;
 
 
 dimensions = 4;
@@ -152,8 +156,6 @@ disp("Starting simulink...")
 sim("inversedynamicstest.slx");
 
 %% Bridge to impedance model
-n_dof = N;
-
 DH = double(dh_raw);
 
 mass = params.m_l(:); 
@@ -182,9 +184,13 @@ R_d = eye(3);
 q0     = zeros(N, 1);
 qdot_0 = zeros(N, 1);
 dt    = 0.001;
-T_sim = t_f;
+T = t_f;
 
 % Assignment from workspace to simulink constants
+assignin('base', 'a',       a);
+assignin('base', 'd',       d);
+assignin('base', 'alpha',   alpha);
+assignin('base', 'theta',   theta);
 assignin('base', 'DH',      DH);
 assignin('base', 'mass',    mass);
 assignin('base', 'com',     com);
@@ -197,14 +203,13 @@ assignin('base', 'R_d',     R_d);
 assignin('base', 'q0',      q0);
 assignin('base', 'q_dot0',  qdot_0);
 assignin('base', 'dt',      dt);
-assignin('base', 'T_sim',   T_sim);
-assignin('base', 'n_dof',   n_dof);
+assignin('base', 'T_sim',   T);
+assignin('base', 'n_dof',   N);
 
 open_system("impedanceSimulink.slx")
 set_param("impedanceSimulink", "SimulationMode", "normal")
 disp("Starting impedance control simulation...")
-sim("impedanceSimulink.slx");
-
+Impedance_out = sim("impedanceSimulink.slx");
 
 
 
